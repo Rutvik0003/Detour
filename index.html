@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FAF6EF">
   <title>Detour · prototype</title>
+  <link rel="stylesheet" href="css/inter.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="stage">
-    <!-- Desktop-only side panel: brand, tagline, jump list (filled by app.js) -->
+    <!-- Desktop-only side panel: welcome card, tour step guide, or jump list (filled by app.js) -->
     <aside class="panel" id="panel" aria-label="About this prototype"></aside>
 
     <div class="phone-wrap">
@@ -27,6 +28,9 @@
 
           <main class="viewport" id="viewport"></main>
           <nav class="tabbar is-hidden" id="tabbar" aria-label="Main"></nav>
+          <!-- Phone-width only: slim tour bar and welcome card -->
+          <div class="tourbar" id="tourbar" aria-live="polite"></div>
+          <div class="welcome-layer" id="welcome"></div>
 
           <button class="notif" id="notif" type="button" aria-hidden="true"></button>
           <div class="sheet-layer" id="sheetLayer"></div>

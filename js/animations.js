@@ -88,19 +88,80 @@
   function notify(o) {
     const n = document.getElementById('notif');
     if (!n) return;
-    const hide = () => n.classList.remove('is-on');
+    let hidden = false;
+    const hide = () => {
+      if (hidden) return;
+      hidden = true;
+      clearTimeout(notifTimer);
+      n.classList.remove('is-on');
+      n.setAttribute('aria-hidden', 'true');
+      if (o.onHide) o.onHide();
+    };
     n.innerHTML =
       '<span class="notif__icon">' + (o.iconHTML || '') + '</span>' +
       '<span class="notif__main">' +
-        '<span class="notif__head"><span>Detour</span><span>now</span></span>' +
-        '<span class="notif__title">' + o.title + '</span>' +
+        '<span class="notif__head"><span>' + (o.app || '') + '</span><span>' + (o.when || '') + '</span></span>' +
+        (o.title ? '<span class="notif__title">' + o.title + '</span>' : '') +
         '<span class="notif__body">' + o.body + '</span>' +
+        (o.detourLine ? '<span class="notif__detour">' + o.detourLine + '</span>' : '') +
       '</span>';
-    n.onclick = () => { hide(); if (o.onTap) o.onTap(); };
+    n.onclick = () => { if (o.onTap) o.onTap(); hide(); };
     n.setAttribute('aria-hidden', 'false');
     replayClass(n, 'is-on');
     clearTimeout(notifTimer);
-    notifTimer = setTimeout(hide, 6500);
+    notifTimer = setTimeout(hide, o.duration || 6500);
+  }
+
+  /* Tour spotlight: a soft pulsing ring + "Tap here" bubble over one element inside `root`.
+     Follows the element while it scrolls; removes itself when the element is tapped or gone. */
+  function spotlight(target, root, opts) {
+    opts = opts || {};
+    const scale = () => (opts.getScale && opts.getScale()) || 1;
+    const scroller = target.closest('.scroll');
+    if (scroller) {
+      const s = scale();
+      const tr = target.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
+      const below = (tr.bottom - sr.bottom) / s + 120;
+      const above = (sr.top - tr.top) / s + 80;
+      if (below > 0) scroller.scrollTop += below;
+      else if (above > 0) scroller.scrollTop -= above;
+    }
+    const ring = document.createElement('div');
+    ring.className = 'spot';
+    ring.setAttribute('aria-hidden', 'true');
+    ring.innerHTML = '<span class="spot__tip">' + (opts.label || '') + '</span>';
+    root.appendChild(ring);
+    let raf = 0, gone = false;
+    const place = () => {
+      if (gone) return;
+      if (!target.isConnected || target.closest('.is-leaving')) { remove(); return; }
+      const s = scale();
+      const r = target.getBoundingClientRect(), p = root.getBoundingClientRect();
+      const pad = 6;
+      const w = r.width / s + pad * 2, hgt = r.height / s + pad * 2;
+      const x = (r.left - p.left) / s - pad, y = (r.top - p.top) / s - pad;
+      ring.style.width = w + 'px';
+      ring.style.height = hgt + 'px';
+      ring.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      ring.style.borderRadius = hgt < 70 ? '999px' : '22px';
+      ring.classList.toggle('spot--below', y < 130);
+      ring.classList.toggle('is-hidden', r.width === 0 || getComputedStyle(target).visibility === 'hidden');
+      raf = requestAnimationFrame(place);
+    };
+    const onDown = e => { if (target.contains(e.target)) remove(); };
+    function remove() {
+      if (gone) return;
+      gone = true;
+      cancelAnimationFrame(raf);
+      document.removeEventListener('pointerdown', onDown, true);
+      ring.classList.add('is-out');
+      setTimeout(() => ring.remove(), 250);
+      if (opts.onRemove) opts.onRemove();
+    }
+    document.addEventListener('pointerdown', onDown, true);
+    place();
+    requestAnimationFrame(() => ring.classList.add('is-on'));
+    return remove;
   }
 
   /* Drag-to-swipe card (mouse + touch through pointer events). */
@@ -161,7 +222,7 @@
   }
 
   window.Anim = {
-    reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, notify, swipeable,
+    reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, notify, spotlight, swipeable,
     wait: ms => new Promise(r => setTimeout(r, ms))
   };
 })();
