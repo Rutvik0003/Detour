@@ -1,83 +1,112 @@
-/* Detour prototype · the user model, the options generator and the day engine (window.Model).
-   No DOM here: screens and app.js read from it and listen for App events. */
+/* Detour prototype · user model, nostalgia quiz, the agent's day, options and friends (window.Model).
+   No DOM here: screens and app.js read from it. */
 (function () {
   'use strict';
   const D = window.DETOUR_DATA;
   const T = D.text;
   const S = () => window.App.state;
 
-  /* ---------- state ---------- */
-  function freshDay() {
-    return { clock: D.day.start, log: [], sent: 0 };
-  }
+  const pickOne = list => list[Math.floor(Math.random() * list.length)];
 
-  /* The quiz for a city: 3 general items + 2 for that city, in a fixed order. */
-  function quizItems(city) {
-    const local = D.quiz.cities[city] || D.quiz.cities.Other;
-    const gen = {};
-    D.quiz.general.forEach(q => { gen[q.id] = q; });
-    return D.quiz.order.map(k => (k === 'CITY0' ? local[0] : k === 'CITY1' ? local[1] : gen[k]));
-  }
+  /* Every decision in the pool, by id. */
+  const DECISIONS = {};
+  D.slots.forEach(sl => sl.pool.forEach(d => { d.slot = sl.id; DECISIONS[d.id] = d; }));
+  const decision = id => DECISIONS[id] || null;
+  const rememberById = id => D.remember.find(r => r.id === id);
 
-  function defaultQuiz(city) {
-    const items = quizItems(city);
+  /* ---------- profile and nostalgia ---------- */
+  const name = () => (S().profile.name || '').trim();
+  const hometown = () => {
+    const p = S().profile;
+    return p.hometown === 'Other' ? (p.homeOther || '').trim() || 'your hometown' : p.hometown;
+  };
+  const year18 = () => Number(S().profile.year18) || 2019;
+  const era = y => D.eras.find(e => y >= e.from && y <= e.to) || D.eras[1];
+  const provider = () => D.providers.find(p => p.id === S().profile.provider) || D.providers[0];
+
+  /* 8 polaroids: 6 from the era you turned 18 in, 2 from your hometown. */
+  function quizItems() {
+    const p = S().profile;
+    const e = era(year18()).items;
+    const home = D.hometowns[p.hometown] || D.hometowns.Other;
+    return [e[0], home[0], e[1], e[2], home[1], e[3], e[4], e[5]];
+  }
+  function defaultQuiz() {
+    const items = quizItems();
     const out = {};
-    D.quiz.order.forEach((k, i) => { out[items[i].id] = D.quiz.defaults[k]; });
+    items.forEach((q, i) => { out[q.id] = [0, 1, 3, 4, 6].indexOf(i) > -1; });
     return out;
   }
+  const caption = q => q.season + ', ' + (year18() + q.off);
+  const ageAt = q => 18 + (q.off || 0);
 
-  /* explore = true gives a ready-to-use account for "Explore freely". */
-  function defaults(explore) {
+  /* ---------- the day ---------- */
+  function newDay(run) {
+    const s = S();
+    const prev = s && s.day ? s.day.plan.map(p => p.id).join() : '';
+    let plan;
+    let tries = 0;
+    do {
+      plan = D.slots.map(sl => {
+        const d = pickOne(sl.pool);
+        return { id: d.id, time: sl.time + Math.floor(Math.random() * 9) - 4 };
+      });
+      tries++;
+    } while (plan.map(p => p.id).join() === prev && tries < 5);
+    const r = pickOne(D.remember);
+    plan.push({ id: 'remember', rid: r.id, time: pickOne([690, 870, 1030, 1130]) });
+    plan.sort((a, b) => a.time - b.time);
+    const skills = s && s.skills && s.skills.length ? s.skills : ['cooking', 'wayfinding', 'writing', 'trip'];
+    const ch = pickOne(D.challenges.filter(c => skills.indexOf(c.skill) > -1).concat([])) || D.challenges[0];
     return {
-      v: 3,
-      onboarded: !!explore,
-      profile: { name: '', city: 'Bengaluru', phone: '', provider: 'nova' },
-      quiz: explore ? defaultQuiz('Bengaluru') : {},
-      categories: { food: true, music: true, clothes: true, places: true, weekend: true },
-      skills: ['cooking', 'trip'],
-      friends: explore ? D.sampleFriends.slice() : [],
-      invited: {},
-      friendSee: { food: true, music: true, clothes: true, places: true, weekend: false },
-      notif: { limit: 3, quietFrom: 22, quietTo: 7 },
-      day: freshDay(),
-      stamps: D.numbers.stampsStart,
-      mealsMonth: D.numbers.mealsMonthStart,
-      diy: 'idle',
-      diySteps: {},
-      ideas: {},
-      shares: [],
-      swap: null,
-      tried: {},
-      sentHandled: false,
-      redeemed: {}
+      run: run || 1, clock: D.day.start, plan: plan, log: [], sent: 0,
+      challenge: ch.id, diy: 'idle', diySteps: {}, otd: Math.floor(Math.random() * D.onThisDay.length)
     };
   }
 
-  /* Fill anything missing when someone jumps ahead without onboarding. */
-  function ensureReady() {
+  function defaults() {
+    const s = {
+      v: 4,
+      setup: false,
+      profile: { name: '', phone: '', city: 'Bengaluru', hometown: 'Kolkata', homeOther: '', year18: 2019, provider: 'nova' },
+      quiz: {},
+      skills: ['cooking', 'wayfinding', 'writing', 'trip'],
+      notif: { limit: 3, quietFrom: 22, quietTo: 7 },
+      day: null,
+      stamps: D.numbers.stampsStart,
+      friends: D.sampleFriends.slice(),
+      requestsIn: D.requestsIn.slice(),
+      requestsSent: [],
+      invited: {},
+      acceptedOnce: false,
+      sentHandled: false,
+      posts: [],
+      likes: {},
+      tried: {},
+      ideas: {},
+      shares: [],
+      redeemed: {}
+    };
+    return s;
+  }
+  /* Fill the parts that need the state to exist first. */
+  function finishDefaults() {
     const s = S();
-    if (!Object.keys(s.quiz).length) s.quiz = defaultQuiz(s.profile.city);
-    s.onboarded = true;
+    if (!Object.keys(s.quiz).length) s.quiz = defaultQuiz();
+    if (!s.day) s.day = newDay(1);
   }
 
-  /* ---------- small helpers ---------- */
-  const name = () => (S().profile.name || '').trim();
-  const provider = () => D.providers.find(p => p.id === S().profile.provider) || D.providers[0];
-  const contact = id => D.contacts.find(c => c.id === id);
-  const friends = () => S().friends.map(contact).filter(Boolean);
-  const event = id => D.day.events.find(e => e.id === id);
-  const catLabel = id => (D.categories.find(c => c.id === id) || { label: '' }).label;
+  const challenge = () => D.challenges.find(c => c.id === S().day.challenge) || D.challenges[0];
 
   function fmtTime(mins) {
-    let h = Math.floor(mins / 60) % 24;
+    let hr = Math.floor(mins / 60) % 24;
     const m = mins % 60;
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
+    const ap = hr >= 12 ? 'pm' : 'am';
+    hr = hr % 12 || 12;
+    return hr + ':' + String(m).padStart(2, '0') + ' ' + ap;
   }
   function clockShort(mins) {
-    const h = Math.floor(mins / 60) % 24 % 12 || 12;
-    return h + ':' + String(mins % 60).padStart(2, '0');
+    return (Math.floor(mins / 60) % 24 % 12 || 12) + ':' + String(mins % 60).padStart(2, '0');
   }
   function dayPart(mins) {
     const p = T.today.parts;
@@ -88,138 +117,153 @@
     return n.quietFrom > n.quietTo ? (hr >= n.quietFrom || hr < n.quietTo) : (hr >= n.quietFrom && hr < n.quietTo);
   }
 
-  /* ---------- the options generator ---------- */
-  function quizIn(cat, answer) {
-    const s = S();
-    return quizItems(s.profile.city).filter(q => q.cat === cat && s.quiz[q.id] === answer);
-  }
-
-  function optionsFor(ev) {
-    const s = S();
-    const cat = ev.cat;
-    const rot = ev.rot || 0;
-    const C = D.catalog[cat];
-    const O = T.options;
-
-    // From a friend (or from the friend you swapped tastes with)
-    let friendOpt = null;
-    const swapF = s.swap ? contact(s.swap) : null;
-    const pool = swapF ? [swapF] : friends().filter(f => f.loves && f.loves[cat]);
-    if (pool.length) {
-      const f = pool[rot % pool.length];
-      const l = f.loves[cat];
-      friendOpt = { source: 'friend', title: l.title, line: UI.fill(swapF ? O.swapLine : O.friendLine, { name: f.name }), meta: l.meta, free: !!l.free };
-    }
-
-    // From your taste: a quiz "yes" in this category, else something you used to do
-    const yes = quizIn(cat, true);
-    const tasteSrc = yes[rot] ? yes[rot].taste : C.taste[rot % C.taste.length];
-    const tasteOpt = Object.assign({ source: 'taste' }, tasteSrc);
-
-    // Something new: a quiz "not me" in this category, else new in your city
-    const no = quizIn(cat, false);
-    let newOpt;
-    let cityNew = false;
-    if (no[rot]) newOpt = Object.assign({ source: 'new' }, no[rot].taste, { line: O.skippedLine });
-    else if (C.newCity && rot === 0) { newOpt = Object.assign({ source: 'new' }, C.newCity[s.profile.city] || C.newCity.Other); cityNew = true; }
-    else newOpt = Object.assign({ source: 'new' }, C.newMore);
-
-    // No friends yet: offer a second new idea instead of inventing a friend.
-    if (!friendOpt) friendOpt = Object.assign({ source: 'new' }, C.newMore.title === newOpt.title ? C.free : C.newMore);
-
-    const list = [friendOpt, tasteOpt, newOpt];
-    // Keep a free option in the mix, unless that would hide a new idea from your own city.
-    if (!list.some(o => o.free) && !cityNew) list[2] = Object.assign({ source: 'new' }, C.free);
-    return list.map((o, i) => Object.assign({ id: ev.id + '-' + i }, o));
-  }
-
-  /* ---------- the day engine ---------- */
-  const OPEN = ['notified', 'quietLimit', 'quietHours', 'diyOpen'];
-  const MADE = ['swap', 'self', 'diyDone'];
-
+  const OPEN = ['offer', 'skill', 'quietLimit', 'quietHours', 'remember'];
+  const MADE = ['swap', 'self'];
   const logEntry = id => S().day.log.find(e => e.id === id);
+  const isOpen = e => OPEN.indexOf(e.status) > -1;
 
-  /* An agent decision happens. silent = skipped past (jumps), so Detour says nothing. */
-  function fire(ev, silent) {
+  /* One planned item happens. silent = skipped past by a jump, so Detour says nothing. */
+  function fire(item, silent) {
     const s = S(), d = s.day;
-    if (logEntry(ev.id)) return null;
-    const entry = { id: ev.id, time: ev.time };
-    if (ev.type === 'diy') entry.status = s.diy === 'done' ? 'diyDone' : silent ? 'diySkip' : 'diyOpen';
-    else if (!ev.repeat) entry.status = 'info';
-    else if (!s.categories[ev.cat]) entry.status = 'off';
-    else if (silent) entry.status = 'went';
-    else if (inQuiet(ev.time)) { entry.status = 'quietHours'; entry.quiet = 'hours'; }
-    else if (d.sent >= s.notif.limit) { entry.status = 'quietLimit'; entry.quiet = 'limit'; }
-    else { entry.status = 'notified'; d.sent++; }
+    if (logEntry(item.id)) return null;
+    const entry = { id: item.id, time: item.time };
+    if (item.id === 'remember') {
+      entry.rid = item.rid;
+      entry.status = silent ? 'notnow' : 'remember';
+    } else {
+      const dec = decision(item.id);
+      if (dec.kind === 'quiet') entry.status = 'quiet';
+      else if (silent) entry.status = 'went';
+      else if (inQuiet(item.time)) { entry.status = 'quietHours'; entry.quiet = 'hours'; }
+      else if (d.sent >= s.notif.limit) { entry.status = 'quietLimit'; entry.quiet = 'limit'; }
+      else { entry.status = dec.kind === 'repeat' ? 'offer' : 'skill'; d.sent++; }
+    }
     d.log.push(entry);
     d.log.sort((a, b) => a.time - b.time);
     return entry;
   }
 
-  /* If you don't answer in time, the agent just goes ahead. No guilt. */
+  /* If you don't answer in time, the agent goes ahead. No guilt. */
   function expire(clock) {
     S().day.log.forEach(e => {
-      if (e.status === 'diyOpen' && clock >= e.time + 150) e.status = 'diySkip';
-      else if (OPEN.indexOf(e.status) > -1 && e.status !== 'diyOpen' && clock >= e.time + D.day.waitMins) e.status = 'went';
+      if (e.status === 'remember' && clock >= e.time + 120) e.status = 'notnow';
+      else if (isOpen(e) && e.status !== 'remember' && clock >= e.time + D.day.waitMins) e.status = 'went';
     });
   }
 
-  /* Move the clock forward, quietly logging anything that happened before `to`. */
+  function nextItem(upTo) {
+    return S().day.plan.find(p => p.time <= upTo && !logEntry(p.id));
+  }
+
+  /* Move the clock forward, quietly logging anything before `to`. */
   function fastForward(to) {
     const d = S().day;
-    D.day.events.forEach(ev => { if (ev.time < to) fire(ev, true); });
+    d.plan.forEach(p => { if (p.time < to) fire(p, true); });
     d.clock = to;
     expire(to);
   }
-
-  function resetDay() { S().day = freshDay(); }
 
   function choose(id, choice, opt) {
     const e = logEntry(id);
     if (!e) return;
     e.status = choice;
-    e.opt = opt ? { title: opt.title } : null;
+    e.opt = opt ? { title: opt.title, source: opt.source || null } : null;
   }
 
-  function markDiy(status) {
-    const e = logEntry('diy');
-    if (e) e.status = status;
-  }
+  const madeToday = () => S().day.log.filter(e => MADE.indexOf(e.status) > -1).length + (S().day.diy === 'done' ? 1 : 0);
 
-  const madeToday = () => S().day.log.filter(e => MADE.indexOf(e.status) > -1).length;
-  const isOpen = e => OPEN.indexOf(e.status) > -1;
-
-  /* What Today shows: the newest open moment, else the newest result, else calm. */
+  /* What Today shows: an open moment, else the newest result, else today's challenge, else calm. */
   function todayMoment() {
-    const log = S().day.log;
+    const d = S().day;
+    const log = d.log;
     const open = log.slice().reverse().find(isOpen);
-    if (open) return { kind: 'open', entry: open };
-    const last = log.slice().reverse().find(e => e.status !== 'info' && e.status !== 'off');
+    if (open) return { kind: open.status === 'remember' ? 'remember' : 'open', entry: open };
     const newest = log[log.length - 1];
-    if (last && last === newest && ['swap', 'self', 'keep', 'diyDone'].indexOf(last.status) > -1) return { kind: 'result', entry: last };
-    return { kind: 'calm', entry: newest || null };
+    if (newest && ['swap', 'self', 'keep'].indexOf(newest.status) > -1) return { kind: 'result', entry: newest };
+    if (d.diy === 'idle' || d.diy === 'in' || d.diy === 'verify') return { kind: 'diy' };
+    return { kind: 'calm', entry: log.slice().reverse().find(e => e.id !== 'remember') || null };
   }
 
-  /* A friend's pick for the Friends tab: prefer your enabled categories. */
-  function friendPick(f) {
+  /* ---------- options from the three sources ---------- */
+  function hash(str) { let n = 0; for (let i = 0; i < str.length; i++) n = (n * 31 + str.charCodeAt(i)) >>> 0; return n; }
+
+  function optionsFor(dec) {
     const s = S();
-    const order = ['food', 'music', 'weekend', 'clothes', 'places'];
-    const cat = order.find(c => s.categories[c] && f.loves[c]) || order.find(c => f.loves[c]);
-    return { cat: cat, item: f.loves[cat] };
+    const O = T.options;
+    const k = hash(dec.id + s.day.run);
+    const list = [];
+
+    // From a friend
+    const fr = friends().filter(f => f.loves && f.loves[dec.cat]);
+    if (fr.length) {
+      const f = fr[k % fr.length];
+      const l = f.loves[dec.cat];
+      list.push({ source: 'friend', title: l.title, line: f.both, meta: l.meta, free: l.free, sub: UI.fill(O.friendLine, { name: f.name }), friend: f.id });
+    }
+
+    // From your taste: a "yes" from the quiz, with when you loved it
+    const yes = quizItems().filter(q => q.cat === dec.cat && q.taste && s.quiz[q.id] === true);
+    if (yes.length) {
+      const q = yes[k % yes.length];
+      list.push(Object.assign({ source: 'taste', sub: UI.fill(O.tasteLine, { age: ageAt(q) }) }, q.taste, { line: q.title + '.' }));
+    } else {
+      list.push(Object.assign({ source: 'taste', sub: UI.fill(O.tasteLine, { age: 19 }) }, dec.fallback));
+    }
+
+    // Something new: a "not me" from the quiz, else something nobody you know has tried
+    const no = quizItems().filter(q => q.cat === dec.cat && q.taste && s.quiz[q.id] === false);
+    const news = dec.news.slice();
+    if (no.length) {
+      const q = no[k % no.length];
+      list.push(Object.assign({ source: 'new', sub: UI.fill(O.skippedLine, { age: ageAt(q) }) }, q.taste, { line: q.title + '.' }));
+    } else {
+      list.push(Object.assign({ source: 'new', sub: O.newLine }, news[k % news.length]));
+    }
+    // No friend for this? Show the other new idea instead of inventing one.
+    if (list.length < 3) list.push(Object.assign({ source: 'new', sub: O.newLine }, news[(k + 1) % news.length]));
+    return list.map((o, i) => Object.assign({ id: dec.id + '-' + i }, o));
   }
 
-  /* Something of yours to send back to a friend. */
-  function myPick() {
+  /* ---------- friends ---------- */
+  const person = id => D.people.find(p => p.id === id);
+  const friends = () => S().friends.map(person).filter(Boolean);
+  const isFriend = id => S().friends.indexOf(id) > -1;
+
+  function feed() {
     const s = S();
-    const yes = quizItems(s.profile.city).filter(q => s.quiz[q.id]);
-    return yes.length ? yes[0].taste.title : D.catalog.food.taste[0].title;
+    const mine = s.posts.map(p => Object.assign({ mine: true }, p));
+    const theirs = friends().filter(f => f.post).map(f => Object.assign({ id: 'p-' + f.id, by: f.id }, f.post));
+    return mine.concat(theirs);
+  }
+
+  /* Returns true when this request will be accepted a moment later (the first one only). */
+  function sendRequest(id) {
+    const s = S();
+    if (s.requestsSent.indexOf(id) < 0 && !isFriend(id)) s.requestsSent.push(id);
+    if (!s.acceptedOnce) { s.acceptedOnce = true; return true; }
+    return false;
+  }
+  function acceptSent(id) {
+    const s = S();
+    s.requestsSent = s.requestsSent.filter(x => x !== id);
+    if (!isFriend(id)) s.friends.push(id);
+  }
+  function answerRequest(id, yes) {
+    const s = S();
+    s.requestsIn = s.requestsIn.filter(x => x !== id);
+    if (yes && !isFriend(id)) s.friends.push(id);
+  }
+  function sentFriend() {
+    const want = person(D.sentToYou.from);
+    if (isFriend(want.id)) return want;
+    return friends()[0] || null;
   }
 
   window.Model = {
-    defaults, defaultQuiz, ensureReady, freshDay, quizItems,
-    name, provider, contact, friends, event, catLabel,
+    defaults, finishDefaults, newDay, decision, rememberById, challenge,
+    name, hometown, year18, provider, quizItems, defaultQuiz, caption, ageAt,
     fmtTime, clockShort, dayPart, inQuiet,
-    optionsFor, fire, expire, fastForward, resetDay, choose, markDiy, logEntry,
-    madeToday, isOpen, todayMoment, friendPick, myPick, OPEN
+    fire, expire, nextItem, fastForward, choose, logEntry, isOpen, madeToday, todayMoment, optionsFor,
+    person, friends, isFriend, feed, sendRequest, acceptSent, answerRequest, sentFriend
   };
 })();

@@ -83,96 +83,7 @@
     toastTimer = setTimeout(() => t.classList.remove('is-on'), 2600);
   }
 
-  /* Lock-screen style notification that slides down from the top of the phone. */
-  /* Two-part notification: a small grey agent banner, then Detour's coral line attached below.
-     sticky = stays until tapped or hidden (the day simulator pauses while it waits). */
-  let notifTimer = 0;
-  let notifHide = null;
-  function notify(o) {
-    const n = document.getElementById('notif');
-    if (!n) return;
-    if (notifHide) notifHide(true);
-    let hidden = false;
-    const hide = quiet => {
-      if (hidden) return;
-      hidden = true;
-      notifHide = null;
-      clearTimeout(notifTimer);
-      n.classList.remove('is-on');
-      n.setAttribute('aria-hidden', 'true');
-      if (o.onHide && !quiet) o.onHide();
-    };
-    n.innerHTML =
-      '<span class="notif__part notif__part--agent">' +
-        '<span class="notif__icon notif__icon--agent">' + (o.agentIcon || '') + '</span>' +
-        '<span class="notif__main"><span class="notif__head"><b>' + o.agentLabel + '</b><span>' + (o.when || '') + '</span></span>' +
-        '<span class="notif__body">' + o.agent + '</span></span></span>' +
-      (o.detour ? '<span class="notif__part notif__part--detour">' +
-        '<span class="notif__icon">' + (o.detourIcon || '') + '</span>' +
-        '<span class="notif__main"><span class="notif__head"><b>' + o.detourLabel + '</b></span>' +
-        '<span class="notif__detourline">' + o.detour + '</span></span></span>' : '');
-    n.onclick = () => { if (o.onTap) o.onTap(); hide(true); };
-    n.setAttribute('aria-hidden', 'false');
-    replayClass(n, 'is-on');
-    clearTimeout(notifTimer);
-    if (!o.sticky) notifTimer = setTimeout(hide, o.duration || 6500);
-    notifHide = hide;
-  }
-  function hideNotif() { if (notifHide) notifHide(true); }
-
-  /* Tour spotlight: a soft pulsing ring + "Tap here" bubble over one element inside `root`.
-     Follows the element while it scrolls; removes itself when the element is tapped or gone. */
-  function spotlight(target, root, opts) {
-    opts = opts || {};
-    const scale = () => (opts.getScale && opts.getScale()) || 1;
-    const scroller = target.closest('.scroll');
-    if (scroller) {
-      const s = scale();
-      const tr = target.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
-      const below = (tr.bottom - sr.bottom) / s + 120;
-      const above = (sr.top - tr.top) / s + 80;
-      if (below > 0) scroller.scrollTop += below;
-      else if (above > 0) scroller.scrollTop -= above;
-    }
-    const ring = document.createElement('div');
-    ring.className = 'spot';
-    ring.setAttribute('aria-hidden', 'true');
-    ring.innerHTML = '<span class="spot__tip">' + (opts.label || '') + '</span>';
-    root.appendChild(ring);
-    let raf = 0, gone = false;
-    const place = () => {
-      if (gone) return;
-      if (!target.isConnected || target.closest('.is-leaving') || getComputedStyle(target).pointerEvents === 'none') { remove(); return; }
-      const s = scale();
-      const r = target.getBoundingClientRect(), p = root.getBoundingClientRect();
-      const pad = 6;
-      const w = r.width / s + pad * 2, hgt = r.height / s + pad * 2;
-      const x = (r.left - p.left) / s - pad, y = (r.top - p.top) / s - pad;
-      ring.style.width = w + 'px';
-      ring.style.height = hgt + 'px';
-      ring.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      ring.style.borderRadius = hgt < 70 ? '999px' : '22px';
-      ring.classList.toggle('spot--below', y < 130);
-      ring.classList.toggle('is-hidden', r.width === 0 || getComputedStyle(target).visibility === 'hidden');
-      raf = requestAnimationFrame(place);
-    };
-    const onDown = e => { if (target.contains(e.target)) remove(); };
-    function remove() {
-      if (gone) return;
-      gone = true;
-      cancelAnimationFrame(raf);
-      document.removeEventListener('pointerdown', onDown, true);
-      ring.classList.add('is-out');
-      setTimeout(() => ring.remove(), 250);
-      if (opts.onRemove) opts.onRemove();
-    }
-    document.addEventListener('pointerdown', onDown, true);
-    place();
-    requestAnimationFrame(() => ring.classList.add('is-on'));
-    return remove;
-  }
-
-  /* Drag-to-swipe card (mouse + touch through pointer events). */
+  /* Drag-to-swipe card (mouse + touch through pointer events). Buttons inside still click. */
   function swipeable(el, opts) {
     let startX = 0, startY = 0, dx = 0, dy = 0, active = false, done = false, pid = null;
     const yes = el.querySelector('[data-hint="yes"]');
@@ -182,9 +93,9 @@
       if (yes) yes.style.opacity = Math.max(0, Math.min(1, v / 80));
       if (no) no.style.opacity = Math.max(0, Math.min(1, -v / 80));
     };
-
     el.addEventListener('pointerdown', e => {
       if (done || (e.button !== undefined && e.button !== 0)) return;
+      if (e.target.closest && e.target.closest('button, a, input, select, label')) return;
       active = true; pid = e.pointerId;
       startX = e.clientX; startY = e.clientY; dx = 0; dy = 0;
       try { el.setPointerCapture(pid); } catch (err) { /* ignore */ }
@@ -210,7 +121,6 @@
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
-
     function fling(dir) {
       if (done) return;
       done = true;
@@ -229,8 +139,5 @@
     return { fling: fling };
   }
 
-  window.Anim = {
-    reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, notify, hideNotif, spotlight, swipeable,
-    wait: ms => new Promise(r => setTimeout(r, ms))
-  };
+  window.Anim = { reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, swipeable };
 })();

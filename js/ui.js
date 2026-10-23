@@ -15,7 +15,6 @@
   function esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
-  /* Fill {placeholders} in a text string. */
   function fill(str, vars) {
     return String(str).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] != null ? vars[k] : m));
   }
@@ -36,8 +35,8 @@
     book: '<path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     chip: '<rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9.5 2.5v3M14.5 2.5v3M9.5 18.5v3M14.5 18.5v3M2.5 9.5h3M2.5 14.5h3M18.5 9.5h3M18.5 14.5h3"/><path d="M12 9.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z"/>',
-    arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     chevron: '<path d="M9 6l6 6-6 6"/>',
     chevronLeft: '<path d="M15 6l-6 6 6 6"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
@@ -47,7 +46,6 @@
     heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/>',
     pin: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
     people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/>',
-    shuffle: '<path d="M3 7h3c4.5 0 6.5 10 11 10h4"/><path d="M3 17h3c1.6 0 2.8-1.3 3.8-3M14.2 10c1-1.7 2.2-3 3.8-3h3"/><path d="M18 4l3 3-3 3M18 14l3 3-3 3"/>',
     spark: '<path d="M12 3c.7 4.6 2.4 6.3 7 7-4.6.7-6.3 2.4-7 7-.7-4.6-2.4-6.3-7-7 4.6-.7 6.3-2.4 7-7z"/>',
     leaf: '<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19l7-7"/>',
     stamp: '<path d="M9.5 3.5h5v3.2a2 2 0 0 1-.8 1.6l-.2.2V13h4.2A2.3 2.3 0 0 1 20 15.3V17H4v-1.7A2.3 2.3 0 0 1 6.3 13h4.2V8.5l-.2-.2a2 2 0 0 1-.8-1.6z"/><path d="M5 20.5h14"/>',
@@ -56,7 +54,6 @@
     bowl: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7.5c0-1.4 1.3-1.5 1.3-3M13 7.5c0-1.4 1.3-1.5 1.3-3"/>',
     music: '<path d="M9 18V5.5l11-2V16"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
     shirt: '<path d="M8.5 3.5L3.5 6.5l2 4.5 2.5-1v10.5h8V10l2.5 1 2-4.5-5-3c-.3 1.6-1.7 2.8-3.5 2.8S8.8 5.1 8.5 3.5z"/>',
-    bag: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2M3 12.5h18"/>',
     share: '<path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M5 13v5.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V13"/>',
     play: '<path d="M7 5v14l11-7z"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
@@ -70,13 +67,14 @@
     swap: '<path d="M4 8h14M14 4l4 4-4 4"/><path d="M20 16H6M10 12l-4 4 4 4"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     minus: '<path d="M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
     userPlus: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/>',
     camera: '<rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M9 6l1.5-2.5h3L15 6"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
     chat: '<path d="M4 18.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8z"/><path d="M8 9h8M8 12.5h5"/>',
     link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
-    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/>',
-    phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'
+    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/>'
   };
   function icon(name, size, cls) {
     size = size || 24;
@@ -96,11 +94,18 @@
   function agentTag() { return '<span class="agent-tag">' + icon('chip', 14) + T.agent + '</span>'; }
   function detourTag() { return '<span class="detour-tag"><i></i>' + T.detour + '</span>'; }
 
-  /* ---------- friends ---------- */
-  function avatar(c, size) {
+  function avatar(p, size) {
     size = size || 44;
-    return '<span class="avatar avatar--friend" style="background:' + c.color + ';width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.42) + 'px">' + c.name.charAt(0) + '</span>';
+    return '<span class="avatar avatar--friend" style="background:' + p.color + ';width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.42) + 'px">' + p.name.charAt(0) + '</span>';
   }
+
+  /* ---------- the three option sources, same colours everywhere ---------- */
+  function sourceChip(src) {
+    const s = D.sources[src];
+    return '<span class="chip chip--src" style="--src:' + s.color + ';--srct:' + s.tint + '">' + icon(s.icon, 14) + s.label + '</span>';
+  }
+  const sourceDot = src => '<i class="srcdot" style="background:' + D.sources[src].color + '"></i>';
+  function freeChip() { return '<span class="chip chip--free">' + icon('leaf', 14) + T.options.free + '</span>'; }
 
   /* ---------- signature motif: hand-drawn dotted path ---------- */
   const PATHS = {
@@ -115,22 +120,11 @@
     const p = PATHS[name];
     const id = 'dp' + (++uid);
     const color = o.color || 'var(--coral)';
-    const sw = o.width || 3;
-    const gap = o.gap || 9;
-    const par = o.par || 'xMidYMid meet';
-    const dots = '<path class="dpath__dots" d="' + p.d + '" fill="none" stroke="' + color + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-dasharray="0.1 ' + gap + '"' + (o.draw ? ' mask="url(#' + id + ')"' : '') + '/>';
+    const dots = '<path class="dpath__dots" d="' + p.d + '" fill="none" stroke="' + color + '" stroke-width="' + (o.width || 3) + '" stroke-linecap="round" stroke-dasharray="0.1 ' + (o.gap || 9) + '"' + (o.draw ? ' mask="url(#' + id + ')"' : '') + '/>';
     const mask = o.draw
       ? '<defs><mask id="' + id + '" maskUnits="userSpaceOnUse" x="-40" y="-40" width="' + (p.w + 80) + '" height="' + (p.h + 80) + '"><path class="dpath__reveal" d="' + p.d + '" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/></mask></defs>'
       : '';
-    let ends = '';
-    if (o.ends) {
-      const start = p.d.match(/^M\s*(-?[\d.]+)\s+(-?[\d.]+)/);
-      const nums = p.d.trim().split(/[\s,]+/);
-      const ex = nums[nums.length - 2], ey = nums[nums.length - 1];
-      ends = '<circle class="dpath__start" cx="' + start[1] + '" cy="' + start[2] + '" r="5" fill="var(--ink)"/>' +
-        '<g class="dpath__end" transform="translate(' + ex + ' ' + ey + ')"><circle r="12" fill="var(--coral)" opacity=".18"/><circle r="6" fill="var(--coral)"/></g>';
-    }
-    return '<svg class="dpath ' + (o.cls || '') + '" viewBox="0 0 ' + p.w + ' ' + p.h + '" preserveAspectRatio="' + par + '" aria-hidden="true">' + mask + dots + ends + '</svg>';
+    return '<svg class="dpath ' + (o.cls || '') + '" viewBox="0 0 ' + p.w + ' ' + p.h + '" preserveAspectRatio="' + (o.par || 'xMidYMid meet') + '" aria-hidden="true">' + mask + dots + '</svg>';
   }
 
   function ringSVG(size) {
@@ -141,71 +135,75 @@
   function backBtn(target) {
     return '<button type="button" class="back" data-back="' + (target || '') + '">' + icon('chevronLeft', 20) + '<span>' + T.back + '</span></button>';
   }
-  function sourceChip(src) {
-    const s = D.sources[src];
-    return '<span class="chip chip--' + s.cls + '">' + icon(s.icon, 14) + s.label + '</span>';
-  }
-  function freeChip() { return '<span class="chip chip--free">' + icon('leaf', 14) + T.options.free + '</span>'; }
   function switchHTML(attrs, checked) {
     return '<span class="switch"><input type="checkbox" ' + attrs + (checked ? ' checked' : '') + '><span></span></span>';
   }
-
-  /* Onboarding top: Back + thin progress bar (or just Back when editing from Me). */
+  /* Onboarding top: Back + a thin 6-step progress bar. */
   function obHead(step, opts) {
     opts = opts || {};
     const back = opts.noBack ? '<span></span>' : backBtn(opts.backTo || '');
-    const bar = opts.edit ? '' : '<div class="ob-progress" role="progressbar" aria-valuemin="1" aria-valuemax="11" aria-valuenow="' + step + '"><i style="width:' + (step / 11 * 100) + '%"></i></div>';
-    return '<div class="ob-top">' + back + bar + '</div>';
+    return '<div class="ob-top">' + back + '<div class="ob-progress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="' + step + '"><i style="width:' + (step / 6 * 100) + '%"></i></div></div>';
+  }
+  function privacyNote() {
+    return '<p class="note note--privacy">' + icon('shield', 16) + '<span>' + T.privacy + '</span></p>';
   }
 
-  /* ---------- quiz and recap illustrations (simple line drawings) ---------- */
-  const INK = '#1F1B16', CORAL = '#E2674A', TEAL = '#1E7A72', PAPER = '#FFFCF7';
-  const g0 = '<g fill="none" stroke="' + INK + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">';
-  const ART = {
-    music: g0 +
-      '<path d="M82 98V84a38 38 0 0 1 76 0v14"/>' +
-      '<rect x="70" y="88" width="22" height="36" rx="10" fill="' + CORAL + '"/><rect x="148" y="88" width="22" height="36" rx="10" fill="' + CORAL + '"/>' +
-      '<path d="M190 38v28l12 4"/><circle cx="185" cy="68" r="6" fill="' + INK + '"/>' +
-      '<path d="M48 50v22"/><circle cx="43" cy="74" r="5.5" fill="' + INK + '"/>' +
-      '<path d="M26 128c10-8 18 8 28 0s18 8 28 0" stroke="' + TEAL + '" stroke-dasharray="0.1 7"/>' +
-      '<path d="M158 134c10-8 18 8 28 0s18 8 28 0" stroke="' + TEAL + '" stroke-dasharray="0.1 7"/></g>',
-    linen: g0 +
-      '<path d="M92 30l-34 20 12 28 14-6v58h72V72l14 6 12-28-34-20c-2 10-12 17-28 17s-26-7-28-17z" fill="' + PAPER + '"/>' +
-      '<path d="M120 47v83"/><path d="M58 50l12 28" stroke-width="5" stroke="' + TEAL + '" opacity=".35"/><path d="M182 50l-12 28" stroke-width="5" stroke="' + TEAL + '" opacity=".35"/>' +
-      '<circle cx="120" cy="66" r="2" fill="' + INK + '"/><circle cx="120" cy="86" r="2" fill="' + INK + '"/><circle cx="120" cy="106" r="2" fill="' + INK + '"/>' +
-      '<path d="M30 140h180" stroke-dasharray="0.1 8" stroke="' + CORAL + '"/></g>',
-    park: g0 +
-      '<circle cx="190" cy="34" r="14" fill="#F6D7A7"/>' +
-      '<circle cx="62" cy="62" r="26" fill="#BFD9C9"/><path d="M62 88v40"/>' +
-      '<circle cx="150" cy="70" r="20" fill="#BFD9C9"/><path d="M150 90v38"/>' +
-      '<path d="M104 128c6-30 2-60 8-92M112 128c-2-24 6-50 2-76" stroke="' + TEAL + '"/>' +
-      '<path d="M20 132c40-12 80 8 120-2s60-10 80 0" stroke-dasharray="0.1 8" stroke="' + CORAL + '"/></g>',
-    sea: g0 +
-      '<circle cx="120" cy="70" r="26" fill="#F6D7A7"/>' +
-      '<path d="M20 96h200" />' +
-      '<path d="M24 112c12-8 24 8 36 0s24 8 36 0 24 8 36 0 24 8 36 0 24 8 36 0" stroke="' + TEAL + '"/>' +
-      '<path d="M40 130c12-8 24 8 36 0s24 8 36 0 24 8 36 0 24 8 36 0" stroke="' + TEAL + '" opacity=".6"/>' +
-      '<path d="M170 40l10-6 10 6M60 46l8-5 8 5" stroke="' + INK + '" stroke-width="2"/></g>',
-    cafe: g0 +
-      '<path d="M84 64h66v28a26 26 0 0 1-26 26h-14a26 26 0 0 1-26-26z" fill="' + PAPER + '"/>' +
-      '<path d="M150 72h8a12 12 0 0 1 0 24h-10"/><path d="M70 124h94"/>' +
-      '<path d="M104 52c0-8 8-8 8-16M120 52c0-8 8-8 8-16" stroke="' + CORAL + '"/>' +
-      '<rect x="22" y="94" width="20" height="22" rx="5" fill="' + CORAL + '" stroke="none" opacity=".8"/>' +
-      '<rect x="196" y="94" width="20" height="22" rx="5" fill="' + TEAL + '" stroke="none" opacity=".8"/>' +
-      '<path d="M44 110c10-26 22-34 32-36M164 74c14 4 26 12 32 30" stroke-dasharray="0.1 7" stroke="' + INK + '" opacity=".5"/></g>',
-    seafood: g0 +
-      '<path d="M24 112C60 52 160 40 220 62 190 112 90 130 24 112z" fill="#BFD9C9" stroke="' + TEAL + '"/>' +
-      '<path d="M40 106c50-20 120-34 168-40" stroke="' + TEAL + '" stroke-width="1.8"/>' +
-      '<path d="M88 86c14-14 40-16 56 0-16 16-42 14-56 0z" fill="' + CORAL + '"/><path d="M144 86l14-10v20z" fill="' + CORAL + '"/><circle cx="100" cy="84" r="2" fill="' + INK + '"/>' +
-      '<circle cx="176" cy="80" r="16" fill="' + PAPER + '"/><circle cx="176" cy="80" r="7" fill="#F3D2A8" stroke-width="1.8"/></g>',
-    plate: g0 +
-      '<ellipse cx="120" cy="104" rx="84" ry="22" fill="' + PAPER + '"/>' +
-      '<path d="M66 100c0-26 24-44 54-44s54 18 54 44" fill="#F3D2A8"/>' +
-      '<circle cx="98" cy="84" r="5" fill="' + CORAL + '" stroke="none"/><circle cx="124" cy="76" r="5" fill="' + TEAL + '" stroke="none"/><circle cx="146" cy="88" r="5" fill="' + CORAL + '" stroke="none"/>' +
-      '<path d="M100 44c0-8 8-8 8-16M124 44c0-8 8-8 8-16" stroke="' + CORAL + '"/></g>'
+  /* =========================================================
+     Scenes: small drawings used as old photos (quiz), feed photos and feed videos.
+     Anything with class "anim" moves only inside a playing video.
+     ========================================================= */
+  const steam = (x, y) => '<path class="anim anim-steam" d="M' + x + ' ' + y + 'c-10-14 10-22 0-38" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".75"/>';
+  const bg = c => '<rect width="300" height="300" fill="' + c + '"/>';
+  const SCENES = {
+    curry: bg('#F3D2A8') + '<ellipse cx="150" cy="215" rx="118" ry="34" fill="#FFF8EC"/><path d="M58 200a92 56 0 0 0 184 0z" fill="#E2674A"/><ellipse cx="150" cy="200" rx="92" ry="22" fill="#D9822B"/><circle cx="118" cy="196" r="9" fill="#F4E3B2"/><circle cx="160" cy="204" r="7" fill="#7FB069"/><circle cx="186" cy="193" r="6" fill="#F4E3B2"/>' + steam(128, 160) + steam(172, 150),
+    chai: bg('#E6CFB6') + '<rect x="0" y="210" width="300" height="90" fill="#B98C62"/><path d="M110 120h80l-10 110h-60z" fill="#FFF8EC" opacity=".85"/><path d="M116 150h68l-7 78h-54z" fill="#C9822B"/><ellipse cx="150" cy="232" rx="56" ry="10" fill="#8C5E3C" opacity=".4"/>' + steam(138, 108) + steam(162, 100),
+    beach: '<rect width="300" height="160" fill="#F7C59F"/><circle class="anim anim-rise" cx="150" cy="150" r="42" fill="#F28C5B"/><rect y="150" width="300" height="70" fill="#4B8FA8"/><path class="anim anim-wave" d="M-40 180q20-10 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0 40 0" stroke="#D9ECE8" stroke-width="5" fill="none"/><path class="anim anim-wave2" d="M-40 200q20-10 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0 40 0" stroke="#D9ECE8" stroke-width="4" fill="none" opacity=".7"/><rect y="220" width="300" height="80" fill="#EBD3A8"/>',
+    hills: '<rect width="300" height="300" fill="#D9E4E8"/><circle class="anim anim-rise" cx="210" cy="100" r="28" fill="#F6D7A7"/><path d="M0 230L80 120l60 70 50-90 110 130v70H0z" fill="#6E8F7A"/><path d="M0 260l70-60 80 40 70-50 80 60v50H0z" fill="#3E6B57"/><rect class="anim anim-drift" x="-60" y="150" width="160" height="22" rx="11" fill="#fff" opacity=".6"/>',
+    market: bg('#2B2340') + '<path d="M20 60q130 40 260 0" stroke="#F6D7A7" stroke-width="2" fill="none"/>' + [40, 80, 120, 160, 200, 240].map((x, i) => '<circle class="anim anim-twinkle" style="animation-delay:-' + i * 0.3 + 's" cx="' + x + '" cy="' + (66 + (i % 3) * 6) + '" r="6" fill="#F6C66B"/>').join('') + '<rect x="30" y="150" width="110" height="90" fill="#E2674A"/><path d="M24 150l63-36 63 36z" fill="#F7C59F"/><rect x="160" y="160" width="110" height="80" fill="#1E7A72"/><path d="M154 160l61-32 61 32z" fill="#D9ECE8"/><rect y="240" width="300" height="60" fill="#3A2F52"/>',
+    cycle: '<rect width="300" height="300" fill="#FCE3C8"/><circle cx="230" cy="80" r="30" fill="#F6B26B"/><rect y="220" width="300" height="80" fill="#9C8F7A"/><path class="anim anim-road" d="M-20 260h60M80 260h60M180 260h60M280 260h60" stroke="#F6EFE4" stroke-width="5"/><g class="anim anim-bob"><circle cx="100" cy="200" r="30" fill="none" stroke="#1F1B16" stroke-width="6"/><circle cx="200" cy="200" r="30" fill="none" stroke="#1F1B16" stroke-width="6"/><path d="M100 200l40-50h50l10 50M140 150l20 50h40M185 150l-8-20h-18" stroke="#E2674A" stroke-width="7" fill="none" stroke-linejoin="round"/></g>',
+    rain: '<rect width="300" height="300" fill="#8FA3B0"/><rect y="230" width="300" height="70" fill="#5E7180"/><path d="M80 170a70 60 0 0 1 140 0z" fill="#E2674A"/><path d="M150 170v70q0 14-14 14" stroke="#1F1B16" stroke-width="5" fill="none"/>' + [30, 70, 110, 190, 230, 270, 50, 250].map((x, i) => '<path class="anim anim-rain" style="animation-delay:-' + i * 0.17 + 's" d="M' + x + ' ' + (20 + (i % 4) * 25) + 'l-8 22" stroke="#E6EEF2" stroke-width="3" stroke-linecap="round"/>').join(''),
+    books: bg('#E9DCC8') + '<rect x="30" y="220" width="240" height="14" fill="#8C5E3C"/>' + [['#E2674A', 40, 90], ['#1E7A72', 72, 110], ['#4B5BA8', 100, 80], ['#C9822B', 130, 120], ['#8A6BB8', 160, 95], ['#2F6E9E', 190, 105], ['#B5683A', 222, 85]].map(b => '<rect x="' + b[1] + '" y="' + (220 - b[2]) + '" width="26" height="' + b[2] + '" rx="3" fill="' + b[0] + '"/>').join('') + '<circle cx="240" cy="70" r="20" fill="#F6D7A7" opacity=".9"/>',
+    park: '<rect width="300" height="300" fill="#E4EEDF"/><rect y="220" width="300" height="80" fill="#A9C99A"/><circle cx="80" cy="140" r="50" fill="#5E9C6B"/><rect x="74" y="170" width="12" height="60" fill="#7A5A3A"/><circle cx="220" cy="150" r="40" fill="#3E8E6B"/><rect x="214" y="175" width="12" height="50" fill="#7A5A3A"/><path d="M120 300q30-60 10-90" stroke="#F6EFE4" stroke-width="18" fill="none"/>',
+    street: bg('#F2C9A0') + '<rect x="50" y="120" width="200" height="100" rx="8" fill="#C9533A"/><rect x="40" y="100" width="220" height="24" rx="6" fill="#F6D7A7"/><circle cx="100" cy="240" r="22" fill="#1F1B16"/><circle cx="200" cy="240" r="22" fill="#1F1B16"/><ellipse cx="150" cy="120" rx="40" ry="10" fill="#FFF8EC"/>' + steam(140, 92) + steam(162, 86),
+    noodles: bg('#F6D7A7') + '<path d="M60 160a90 70 0 0 0 180 0z" fill="#E2674A"/><ellipse cx="150" cy="160" rx="90" ry="20" fill="#F4E3B2"/><path d="M90 160q15-20 30 0t30 0 30 0 30 0" stroke="#E8B04A" stroke-width="6" fill="none"/>' + steam(130, 120) + steam(168, 112),
+    phone: bg('#D9E4E8') + '<rect x="95" y="40" width="110" height="220" rx="18" fill="#1F1B16"/><rect x="103" y="56" width="94" height="186" rx="8" fill="#F6EFE4"/><rect x="112" y="80" width="60" height="18" rx="9" fill="#4B5BA8"/><rect x="128" y="108" width="60" height="18" rx="9" fill="#E2674A"/><rect x="112" y="136" width="50" height="18" rx="9" fill="#4B5BA8"/><rect x="138" y="164" width="50" height="18" rx="9" fill="#E2674A"/>',
+    tv: bg('#3A3326') + '<rect x="50" y="60" width="200" height="130" rx="12" fill="#1F1B16"/><rect x="62" y="72" width="176" height="106" fill="#6FA35C"/><rect x="146" y="100" width="4" height="40" fill="#F6EFE4"/><rect x="154" y="100" width="4" height="40" fill="#F6EFE4"/>' + [40, 80, 120, 160, 200, 240].map(x => '<circle cx="' + x + '" cy="250" r="22" fill="#1F1B16"/>').join(''),
+    radio: bg('#E7D3B8') + '<rect x="60" y="110" width="180" height="120" rx="16" fill="#C9533A"/><circle cx="115" cy="170" r="34" fill="#F6EFE4"/><circle cx="115" cy="170" r="22" fill="#B5683A"/><rect x="170" y="140" width="50" height="10" rx="5" fill="#F6EFE4"/><rect x="170" y="160" width="50" height="10" rx="5" fill="#F6EFE4"/><path d="M90 110l60-40" stroke="#1F1B16" stroke-width="5"/><path class="anim anim-float" d="M230 80v-26l14 4" stroke="#1F1B16" stroke-width="4" fill="none"/><circle class="anim anim-float" cx="226" cy="82" r="6" fill="#1F1B16"/>',
+    shirt: bg('#D9ECE8') + '<path d="M150 50l-12 14h24z" stroke="#1F1B16" stroke-width="4" fill="none"/><path d="M110 70l-50 28 16 40 20-8v110h108V130l20 8 16-40-50-28q-6 20-40 20t-40-20z" fill="#4B5BA8"/><path d="M150 90v148" stroke="#F6EFE4" stroke-width="3" stroke-dasharray="2 14"/>',
+    cake: bg('#F3E3CF') + '<rect x="70" y="140" width="160" height="80" rx="18" fill="#B5683A"/><path d="M70 160q80-40 160 0" fill="#8C5E3C"/><ellipse cx="150" cy="230" rx="110" ry="14" fill="#FFF8EC"/>' + steam(150, 120)
   };
+  function scene(key) {
+    return '<svg class="scene" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + (SCENES[key] || SCENES.curry) + '</svg>';
+  }
 
-  /* ---------- story player: shared by 2026 recap, monthly recap, Wrapped ---------- */
+  /* An old photo: cream border, warm faded picture, handwritten caption, slight tilt. */
+  function polaroid(item, opts) {
+    opts = opts || {};
+    const tilt = opts.tilt != null ? opts.tilt : ((item.id || '').length % 5 - 2) * 1.2;
+    return '<figure class="polaroid' + (opts.cls ? ' ' + opts.cls : '') + '" style="--tilt:' + tilt + 'deg">' +
+      '<div class="polaroid__img">' + scene(item.art) + '</div>' +
+      (opts.caption ? '<figcaption class="polaroid__cap">' + opts.caption + '</figcaption>' : '') +
+      '<span class="polaroid__stamp">' + T.quiz.stamp + '</span></figure>';
+  }
+
+  /* A feed photo or video. Real files from the device use <img>/<video>. */
+  function media(m, id) {
+    if (m.url) {
+      return m.kind === 'video'
+        ? '<div class="media media--file"><video src="' + m.url + '" controls playsinline muted loop></video></div>'
+        : '<div class="media media--file"><img src="' + m.url + '" alt=""></div>';
+    }
+    if (m.kind === 'video') {
+      return '<div class="media media--video" data-video="' + id + '">' + scene(m.art) +
+        '<button type="button" class="media__play" data-play="' + id + '" aria-label="' + T.friends.play + '">' + icon('play', 26) + '</button>' +
+        '<span class="media__bar"><i></i></span></div>';
+    }
+    return '<div class="media media--photo">' + scene(m.art) + '</div>';
+  }
+
+  /* =========================================================
+     Story player: You at 18, monthly recap, Wrapped
+     ========================================================= */
   function story(opts) {
     const n = opts.slides.length;
     let idx = -1;
@@ -249,13 +247,24 @@
     return el;
   }
 
-  /* ---------- sharing: preview card, style choice, then a mock share sheet ---------- */
+  /* "Then vs now" block for recaps. */
+  function thenNow() {
+    const X = T.thenNow;
+    const age = 19;
+    return '<div class="thennow"><div class="thennow__col"><p class="thennow__h">' + fill(X.then, { age: age }) + '</p>' +
+      D.thenNow.map(p => '<p class="thennow__then">' + p.then + '</p>').join('') + '</div>' +
+      '<div class="thennow__col"><p class="thennow__h">' + X.now + '</p>' +
+      D.thenNow.map(p => '<p class="thennow__now">' + p.now + '</p>').join('') + '</div></div>';
+  }
+
+  /* =========================================================
+     Sharing: preview, style, then a mock share sheet
+     ========================================================= */
   function shareCard(item, style) {
-    const S = D.share;
     const name = (st().profile.name || '').trim();
     return '<div class="scard scard--' + style + '">' +
       '<div class="scard__path">' + dottedPath('splash', { color: style === 'coral' ? 'rgba(255,255,255,.75)' : 'var(--coral)', width: 3, gap: 9 }) + '</div>' +
-      '<p class="scard__big">' + S.lines[item.kind] + '</p>' +
+      '<p class="scard__big">' + (item.line || D.share.lines[item.kind] || D.share.lines.self) + '</p>' +
       (item.title ? '<p class="scard__item">' + esc(item.title) + '</p>' : '') +
       '<p class="scard__date">' + D.today.short + (name ? ' · ' + esc(name) : '') + '</p>' +
       '<span class="scard__mark">' + wordmark(16) + '</span>' +
@@ -289,13 +298,17 @@
       if (e.target.closest('[data-next]')) { stepWhere(); return; }
       if (e.target.closest('[data-close]')) { close(); return; }
       const t = e.target.closest('[data-target]');
-      if (t) {
-        const target = D.share.targets.find(x => x.id === t.dataset.target);
-        st().shares.unshift({ kind: item.kind, title: item.title || '', style: style, where: target.label });
-        App.save();
-        close();
-        Anim.toast(target.toast);
+      if (!t) return;
+      const target = D.share.targets.find(x => x.id === t.dataset.target);
+      const s2 = st();
+      s2.shares.unshift({ kind: item.kind, title: item.title || '', line: item.line || '', style: style, where: target.label });
+      if (target.id === 'feed') {
+        s2.posts.unshift({ id: 'me-' + Date.now(), art: item.art || 'curry', kind: 'photo', tag: 'did',
+          caption: (item.line || D.share.lines[item.kind] || '') + (item.title ? ' ' + item.title + '.' : ''), likes: 0, ago: 'now' });
       }
+      App.save();
+      close();
+      Anim.toast(target.toast);
     });
     stepPreview();
   }
@@ -304,17 +317,13 @@
   function openRedeem() {
     const S = T.stamps;
     const box = h(
-      '<div class="redeem">' +
-        '<h2 class="h2">' + S.sheetTitle + '</h2>' +
-        '<p class="muted">' + S.sheetSub + '</p>' +
+      '<div class="redeem"><h2 class="h2">' + S.sheetTitle + '</h2><p class="muted">' + S.sheetSub + '</p>' +
         '<ul class="redeem__list">' + D.redeem.map(r =>
           '<li class="redeem__row" data-id="' + r.id + '"><span class="redeem__icon">' + icon(r.icon, 20) + '</span>' +
           '<div class="redeem__txt"><b>' + r.title + '</b><span>' + r.desc + '</span></div>' +
-          '<button type="button" class="redeem__btn"></button></li>').join('') +
-        '</ul>' +
+          '<button type="button" class="redeem__btn"></button></li>').join('') + '</ul>' +
         '<p class="note">' + icon('shield', 16) + '<span>' + S.note + '</span></p>' +
-        '<button type="button" class="btn btn--ghost btn--block" data-close>' + T.close + '</button>' +
-      '</div>'
+        '<button type="button" class="btn btn--ghost btn--block" data-close>' + T.close + '</button></div>'
     );
     const close = App.sheet(box);
     function paint() {
@@ -327,7 +336,6 @@
         b.classList.toggle('is-done', done);
         b.classList.toggle('is-short', !done && s.stamps < r.cost);
         b.innerHTML = done ? icon('check', 14) + S.redeemed : icon('stamp', 14) + r.cost;
-        b.setAttribute('aria-label', r.title + (done ? '' : ', ' + r.cost));
       });
     }
     box.addEventListener('click', e => {
@@ -349,8 +357,9 @@
   }
 
   window.UI = {
-    h, esc, fill, named, $, $$, fmt, icon, wordmark, appIcon, agentTag, detourTag, avatar, dottedPath, ringSVG,
-    backBtn, sourceChip, freeChip, switchHTML, obHead, ART, story, shareCard, openShare, openRedeem
+    h, esc, fill, named, $, $$, fmt, icon, wordmark, appIcon, agentTag, detourTag, avatar,
+    sourceChip, sourceDot, freeChip, dottedPath, ringSVG, backBtn, switchHTML, obHead, privacyNote,
+    scene, polaroid, media, story, thenNow, shareCard, openShare, openRedeem
   };
-  window.Screens = window.Screens || {};
+  window.Screens = {};
 })();

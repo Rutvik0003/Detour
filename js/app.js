@@ -1,28 +1,24 @@
-/* Detour prototype · router, state, tab bar, day simulator, guided tour, side panel, demo menu. */
+/* Detour prototype · router, state, tab bar, the day simulator, the phone banner, and Reset demo. */
 (function () {
   'use strict';
   const D = window.DETOUR_DATA;
   const T = D.text;
   const UI = window.UI;
   const M = window.Model;
-  const STORE_KEY = 'detour-prototype-v3';
-  const STEPS = D.tour;
+  const STORE_KEY = 'detour-prototype-v4';
 
-  /* Every screen. ob = onboarding; tab = owns a tab; tabbar = shows the bar under the last tab. */
+  /* Every screen. ob = setup; tab = owns a tab; tabbar = shows the bar under the last tab. */
   const SCREENS = [
-    { id: 'welcome', ob: 1 }, { id: 'phone', ob: 1 }, { id: 'code', ob: 1 }, { id: 'about', ob: 1 }, { id: 'quiz', ob: 1 },
-    { id: 'recap2026', story: true, theme: 'sand' },
-    { id: 'agent', ob: 1 }, { id: 'consent', ob: 1 }, { id: 'categories', ob: 1 }, { id: 'skills', ob: 1 },
-    { id: 'friendsAdd', ob: 1 }, { id: 'friendsPrivacy', ob: 1 }, { id: 'notifs', ob: 1 }, { id: 'done', ob: 1 },
+    { id: 'welcome', ob: 1 }, { id: 'account', ob: 1 }, { id: 'quiz', ob: 1 },
+    { id: 'at18', story: true, theme: 'sand' }, { id: 'connect', ob: 1 }, { id: 'find', tabbar: true },
     { id: 'today', tab: 'today' }, { id: 'friends', tab: 'friends' }, { id: 'map', tab: 'map' }, { id: 'diy', tab: 'diy' }, { id: 'me', tab: 'me' },
-    { id: 'day', tabbar: true }, { id: 'ideas', tabbar: true }, { id: 'friend', tabbar: true }, { id: 'sent', tabbar: true },
-    { id: 'swap', tabbar: true }, { id: 'recaps', tabbar: true }, { id: 'shared', tabbar: true },
+    { id: 'day', tabbar: true }, { id: 'ideas', tabbar: true }, { id: 'requests', tabbar: true }, { id: 'sent', tabbar: true },
+    { id: 'post', tabbar: true }, { id: 'friend', tabbar: true }, { id: 'recaps', tabbar: true }, { id: 'shared', tabbar: true },
+    { id: 'notifs', tabbar: true }, { id: 'skills', tabbar: true },
     { id: 'monthly', story: true }, { id: 'wrapped', story: true, theme: 'dark' }
   ];
   const META = {};
   SCREENS.forEach((m, i) => { m.order = i; META[m.id] = m; });
-  const JUMPS = ['welcome', 'quiz', 'recap2026', 'agent', 'friendsAdd', 'today', 'day', 'friends', 'diy', 'map', 'monthly', 'wrapped', 'me'];
-
   const TABS = [
     { id: 'today', icon: 'sun' }, { id: 'friends', icon: 'people' }, { id: 'map', icon: 'map' },
     { id: 'diy', icon: 'hand' }, { id: 'me', icon: 'user' }
@@ -30,19 +26,22 @@
   const TAB_INDEX = {};
   TABS.forEach((t, i) => { TAB_INDEX[t.id] = i; });
 
-  /* ---------- state ---------- */
+  /* ---------- state (photos picked from the device are never saved) ---------- */
   function load() {
     try {
       const raw = window.localStorage.getItem(STORE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved && saved.v === 3) return Object.assign(M.defaults(false), saved);
+        if (saved && saved.v === 4) return Object.assign(M.defaults(), saved);
       }
     } catch (e) { /* storage unavailable: run from memory */ }
-    return M.defaults(false);
+    return M.defaults();
   }
   function save() {
-    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(App.state)); } catch (e) { /* ignore */ }
+    try {
+      const copy = Object.assign({}, App.state, { posts: App.state.posts.filter(p => !p.temp) });
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(copy));
+    } catch (e) { /* ignore */ }
   }
 
   /* ---------- tiny event bus ---------- */
@@ -75,8 +74,6 @@
     if (!meta || !window.Screens[id]) return;
     if (current && current.id === id && !opts.force) return;
     if (App._sheetClose) App._sheetClose();
-    clearSpot();
-    if (tour.mode === 'welcome' && current) { tour.mode = 'explore'; renderGuide(); }
 
     const prev = current;
     if (opts.reset || meta.tab) stack = [];
@@ -88,7 +85,7 @@
     const el = window.Screens[id](ctx);
     el.classList.add('screen');
     el.dataset.screen = id;
-    const bar = !!(meta.tab || meta.tabbar || ctx.params.edit);
+    const bar = !!((meta.tab || meta.tabbar) && !ctx.params.setup);
     if (bar) el.classList.add('has-tabbar');
     wire(el);
 
@@ -99,7 +96,6 @@
     transition(el, prev && prev.el, dir);
     setChrome();
     requestAnimationFrame(() => enters.forEach(fn => fn()));
-    tourSync(id);
   }
 
   function back(fallback) {
@@ -134,9 +130,7 @@
       if (isOn) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
       t.tabIndex = current.bar ? 0 : -1;
     });
-    document.querySelectorAll('[data-jump]').forEach(b => b.classList.toggle('is-active', b.dataset.jump === current.id));
-    const showSim = App.state.onboarded && current.bar;
-    phone().classList.toggle('has-simbar', !!showSim);
+    phone().classList.toggle('has-simbar', !!current.bar);
     renderClock();
   }
 
@@ -157,8 +151,7 @@
 
   /* ---------- bottom sheet ---------- */
   function sheet(content) {
-    clearSpot();
-    Anim.hideNotif();
+    hideBanner(true);
     const layer = document.getElementById('sheetLayer');
     layer.innerHTML = '<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet__grab"></div></div>';
     layer.querySelector('.sheet').appendChild(content);
@@ -175,64 +168,102 @@
   }
 
   /* =========================================================
-     Day simulator: the agent decides through the day; Detour reacts
+     The phone banner: the agent decided something. Detour adds its line, or stays quiet.
      ========================================================= */
-  const sim = { playing: false, timer: 0 };
+  const sim = { playing: false, timer: 0, waiting: null };
 
-  function newDay() {
-    const s = App.state;
-    M.resetDay();
-    s.diy = 'idle';
-    s.diySteps = {};
-  }
-
-  function showDecision(id) {
-    const ev = M.event(id);
-    Anim.notify({
-      agentLabel: T.agent, when: T.notify.now, agentIcon: UI.icon('chip', 20), agent: ev.agentNow,
-      detourLabel: T.detour, detourIcon: UI.appIcon(), detour: ev.detour,
-      sticky: true,
-      onTap: () => {
-        const onToday = current && current.id === 'today';
-        if (!onToday) go('today', null, { force: true, reset: true });
-        setTimeout(() => UI.openOptions(id), onToday ? 0 : 420);
+  function showBanner(e) {
+    const B = T.banner;
+    const n = document.getElementById('notif');
+    let html;
+    const cont = '<button type="button" class="bn__cont" data-bn="cont">' + B.cont + UI.icon('chevron', 14) + '</button>';
+    if (e.id === 'remember') {
+      const r = M.rememberById(e.rid);
+      const y = M.year18() + r.off;
+      html = '<div class="bn bn--detour bn--remember"><div class="bn__row">' + UI.detourTag() + '<span class="bn__time">' + B.remember + '</span>' + cont + '</div>' +
+        '<div class="bn__mem">' + UI.polaroid({ id: r.id, art: r.art }, { caption: String(y), tilt: -4 }) +
+        '<div><p class="bn__strong">' + UI.fill(r.title, { y: y }) + '</p><p class="bn__text">' + r.line + '</p></div></div>' +
+        '<div class="bn__btns"><button type="button" class="btn btn--primary btn--sm" data-bn="ryes">' + r.cta + '</button>' +
+        '<button type="button" class="btn btn--quiet btn--sm" data-bn="rno">' + T.today.skillNo + '</button></div></div>';
+    } else {
+      const dec = M.decision(e.id);
+      const agentText = /[.!?]$/.test(dec.agent) ? dec.agent : dec.agent + '.';
+      const agent = '<div class="bn bn--agent"><span class="bn__icon">' + UI.icon('chip', 20) + '</span>' +
+        '<div class="bn__main"><p class="bn__head"><b>' + T.agent + '</b><span>' + M.fmtTime(e.time) + '</span></p><p class="bn__text">' + agentText + '</p></div>' + cont + '</div>';
+      let detour;
+      if (e.status === 'offer') {
+        detour = '<button type="button" class="bn bn--detour bn--tap" data-bn="options">' + UI.detourTag() + '<p class="bn__strong">' + dec.detour + '</p><span class="bn__cta">' + B.offer + UI.icon('chevron', 14) + '</span></button>';
+      } else if (e.status === 'skill') {
+        detour = '<div class="bn bn--detour">' + UI.detourTag() + '<p class="bn__strong">' + dec.ask + '</p>' +
+          '<div class="bn__btns"><button type="button" class="btn btn--primary btn--sm" data-bn="self">' + T.today.skillYes + '</button>' +
+          '<button type="button" class="btn btn--quiet btn--sm" data-bn="no">' + T.today.skillNo + '</button></div></div>';
+      } else if (e.status === 'quietLimit' || e.status === 'quietHours') {
+        detour = '<div class="bn bn--quiet">' + UI.detourTag() + '<p class="bn__text">' + B[e.status] + '</p></div>';
+      } else {
+        detour = '<div class="bn bn--quiet"><p class="bn__text">' + (B[dec.reason] || B.none) + '</p></div>';
       }
-    });
-    if (tour.mode === 'tour' && STEPS[tour.step].moment === 'lunch') scheduleSpot(900);
+      html = agent + detour;
+    }
+    n.innerHTML = html;
+    n.setAttribute('aria-hidden', 'false');
+    sim.waiting = e.id;
+    Anim.replayClass(n, 'is-on');
+    renderSim();
   }
 
-  function afterFire(entry) {
-    if (!entry) return;
-    if (entry.status === 'notified') { simPause(); showDecision(entry.id); renderSim(); }
-    else if (entry.status === 'diyOpen') simPause();
+  function hideBanner(keepWaiting) {
+    const n = document.getElementById('notif');
+    n.classList.remove('is-on');
+    n.setAttribute('aria-hidden', 'true');
+    if (!keepWaiting) sim.waiting = null;
+  }
+
+  function onBannerClick(e) {
+    const b = e.target.closest('[data-bn]');
+    if (!b) return;
+    const id = sim.waiting;
+    const a = b.dataset.bn;
+    if (a === 'cont') { hideBanner(); simPlay(); return; }
+    if (!id) return;
+    if (a === 'options') { UI.openOptions(id); return; }
+    if (a === 'self' || a === 'no') { hideBanner(true); UI.resolveSkill(id, a === 'self'); return; }
+    if (a === 'ryes' || a === 'rno') { hideBanner(true); UI.resolveRemember(id, a === 'ryes'); }
+  }
+
+  /* =========================================================
+     Day simulator: Play runs the day and stops at every agent decision
+     ========================================================= */
+  function newRun() {
+    const s = App.state;
+    s.day = M.newDay((s.day ? s.day.run : 0) + 1);
+    save();
+    emit('day'); emit('clock');
   }
 
   function simTick() {
-    const s = App.state, d = s.day;
+    const d = App.state.day;
     const next = Math.min(D.day.end, d.clock + 5);
-    const ev = D.day.events.find(e => e.time <= next && !M.logEntry(e.id));
-    const before = JSON.stringify(d.log.map(e => e.status));
-    if (ev) {
-      d.clock = Math.max(d.clock, ev.time);
+    const item = M.nextItem(next);
+    if (item) {
+      d.clock = Math.max(d.clock, item.time);
       M.expire(d.clock);
-      const entry = M.fire(ev, false);
+      const e = M.fire(item, false);
       save();
       emit('day'); emit('clock');
-      afterFire(entry);
+      if (e) { simPause(); showBanner(e); }
       return;
     }
+    const before = d.log.map(x => x.status).join();
     d.clock = next;
     M.expire(d.clock);
-    if (JSON.stringify(d.log.map(e => e.status)) !== before) emit('day');
+    if (d.log.map(x => x.status).join() !== before) emit('day');
     emit('clock');
     if (d.clock >= D.day.end) { simPause(); Anim.toast(T.sim.over); }
   }
 
   function simPlay() {
-    const s = App.state;
-    if (!s.onboarded) { Anim.toast(T.sim.needSetup); return; }
-    if (s.day.clock >= D.day.end) newDay();
-    Anim.hideNotif();
+    if (App.state.day.clock >= D.day.end) newRun();
+    hideBanner();
     if (App._sheetClose) App._sheetClose();
     if (!current || current.id !== 'today') go('today', null, { force: true, reset: true });
     sim.playing = true;
@@ -247,50 +278,37 @@
     renderSim();
   }
 
-  /* Jump to a moment of the day and fire its event. */
+  /* Jump to a moment of the day and stop at its decision. */
   function simJump(mid) {
-    const m = D.day.moments.find(x => x.id === mid);
+    const m = D.moments.find(x => x.id === mid);
     if (!m) return;
-    const s = App.state;
     simPause();
-    Anim.hideNotif();
-    if (!s.onboarded) M.ensureReady();
-    if (m.screen) {
-      go(m.screen, mid === 'sunday' ? { sunday: true } : null, { force: true, reset: true });
-      save();
-      return;
-    }
-    let ev = M.event(m.event);
-    if (ev.repeat && !s.categories[ev.cat]) {
-      ev = D.day.events.find(e => e.repeat && e.time >= ev.time && s.categories[e.cat]) || D.day.events.find(e => e.repeat && s.categories[e.cat]) || ev;
-    }
-    if (s.day.clock > ev.time || M.logEntry(ev.id)) newDay();
-    M.fastForward(ev.time);
-    const entry = M.fire(ev, false);
+    hideBanner();
+    if (m.screen) { go(m.screen, mid === 'sunday' ? { sunday: true } : null, { force: true, reset: true }); return; }
+    const find = () => App.state.day.plan.find(p => p.id !== 'remember' && M.decision(p.id).slot === m.slot);
+    let item = find();
+    if (App.state.day.clock > item.time || M.logEntry(item.id)) { newRun(); item = find(); }
+    M.fastForward(item.time);
+    const e = M.fire(item, false);
     save();
     if (!current || current.id !== 'today') go('today', null, { force: true, reset: true });
     emit('day'); emit('clock');
-    if (entry && entry.status === 'notified') setTimeout(() => showDecision(entry.id), 650);
+    if (e) setTimeout(() => showBanner(e), 450);
   }
 
   function renderClock() {
-    const s = App.state;
-    document.getElementById('clock').textContent = s.onboarded ? M.clockShort(s.day.clock) : '8:00';
+    document.getElementById('clock').textContent = M.clockShort(App.state.day.clock);
   }
 
   function simHTML(compact) {
-    const X = T.sim;
-    const chips = D.day.moments.map(m => '<button type="button" class="simchip" data-moment="' + m.id + '">' + m.label + '</button>').join('');
+    const chips = D.moments.map(m => '<button type="button" class="simchip" data-moment="' + m.id + '">' + m.label + '</button>').join('');
     if (compact) {
-      return '<button type="button" class="simbar__play" data-sim="toggle" aria-label="' + X.play + '"></button>' +
-        '<span class="simbar__clock" data-sim-clock></span><div class="simbar__chips">' + chips + '</div>';
+      return '<button type="button" class="simbar__play" data-sim="toggle"></button><span class="simbar__clock" data-sim-clock></span><div class="simbar__chips">' + chips + '</div>';
     }
-    return '<section class="simbox">' +
-      '<p class="simbox__title">' + X.title + '</p>' +
-      '<div class="simbox__row"><button type="button" class="btn btn--ink btn--sm" data-sim="toggle"></button><span class="simbox__clock" data-sim-clock></span></div>' +
-      '<div class="simbox__chips">' + chips + '</div>' +
-      '<p class="simbox__note" data-sim-note></p>' +
-    '</section>';
+    return '<section class="simbox"><p class="simbox__title">' + T.sim.title + '</p>' +
+      '<div class="simbox__row"><button type="button" class="btn btn--ink btn--sm" data-sim="toggle"></button>' +
+        '<span class="simbox__clock" data-sim-clock></span><span class="simbox__run" data-sim-run></span></div>' +
+      '<div class="simbox__chips">' + chips + '</div><p class="simbox__note" data-sim-note></p></section>';
   }
 
   function renderSim() {
@@ -304,9 +322,9 @@
       b.setAttribute('aria-label', label);
     });
     document.querySelectorAll('[data-sim-clock]').forEach(n => { n.textContent = M.fmtTime(s.day.clock); });
+    document.querySelectorAll('[data-sim-run]').forEach(n => { n.textContent = UI.fill(X.run, { n: s.day.run }); });
     document.querySelectorAll('[data-sim-note]').forEach(n => {
-      const paused = !sim.playing && document.getElementById('notif').classList.contains('is-on');
-      n.textContent = paused ? X.paused : over ? X.over : UI.fill(X.note, { n: s.day.sent, max: s.notif.limit });
+      n.textContent = sim.waiting ? X.waiting : over ? X.over : UI.fill(X.note, { n: s.day.sent, max: s.notif.limit });
     });
   }
 
@@ -318,295 +336,55 @@
     return false;
   }
 
-  /* =========================================================
-     Guided tour (11 steps around a day)
-     ========================================================= */
-  const tour = { mode: 'welcome', step: 0 };   // welcome | tour | done | explore
-  let spotOff = null, spotTimer = 0, clearing = false;
-  const shown = {};
-
-  function clearSpot() {
-    clearTimeout(spotTimer);
-    if (spotOff) { clearing = true; spotOff(); clearing = false; spotOff = null; }
-  }
-
-  function scheduleSpot(delay) {
-    clearSpot();
-    if (tour.mode !== 'tour') return;
-    const i = tour.step;
-    if (shown[i]) return;
-    const step = STEPS[i];
-    spotTimer = setTimeout(() => {
-      if (tour.mode !== 'tour' || tour.step !== i || App._sheetClose) return;
-      const target = phone().querySelector(step.target);
-      if (!target) return;
-      spotOff = Anim.spotlight(target, phone(), {
-        getScale: () => App.scale,
-        label: T.panel.tapHere,
-        onRemove: () => { if (!clearing) shown[i] = true; spotOff = null; }
-      });
-    }, delay == null ? 750 : delay);
-  }
-
-  const stepOfScreen = id => STEPS.findIndex(s => s.screens && s.screens.indexOf(id) > -1);
-
-  function tourSync(id) {
+  /* ---------- side panel, phone chip row, Reset demo ---------- */
+  function renderPanel() {
+    document.getElementById('panel').innerHTML =
+      '<div class="panel__brand">' + UI.wordmark(44) + '</div>' +
+      '<p class="panel__tag">' + T.tagline + '</p>' +
+      '<div class="panel__div">' + UI.dottedPath('divider') + '</div>' +
+      simHTML(false);
+    document.getElementById('simbar').innerHTML = simHTML(true);
     renderSim();
-    if (tour.mode !== 'tour') return;
-    const i = stepOfScreen(id);
-    if (i > -1) { tour.step = i; renderGuide(); scheduleSpot(); return; }
-    if (id === 'today' && STEPS[tour.step].screens && App.state.onboarded) {
-      tour.step = STEPS.findIndex(s => s.moment);
-      renderGuide();
-      setTimeout(() => runMoment(tour.step), 450);
-      return;
-    }
-    renderGuide();
   }
 
-  function runMoment(i) {
-    const step = STEPS[i];
-    simJump(step.moment);
-    renderGuide();
-    if (step.moment !== 'lunch') scheduleSpot(1000);
+  function buildReset() {
+    const R = T.reset;
+    const btn = document.getElementById('resetBtn');
+    const pop = document.getElementById('resetPop');
+    btn.innerHTML = UI.icon('refresh', 16) + R.btn;
+    pop.innerHTML = '<p class="resetpop__t">' + R.title + '</p><p class="resetpop__s">' + R.sub + '</p>' +
+      '<div class="resetpop__btns"><button type="button" class="btn btn--primary btn--sm" data-reset="yes">' + R.yes + '</button>' +
+      '<button type="button" class="btn btn--quiet btn--sm" data-reset="no">' + R.no + '</button></div>';
+    const toggle = on => { pop.hidden = !on; btn.setAttribute('aria-expanded', on ? 'true' : 'false'); if (on) pop.querySelector('[data-reset="yes"]').focus(); };
+    btn.addEventListener('click', () => toggle(pop.hidden));
+    pop.addEventListener('click', e => {
+      const b = e.target.closest('[data-reset]');
+      if (!b) return;
+      toggle(false);
+      if (b.dataset.reset === 'yes') resetDemo();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pop.hidden) toggle(false); });
   }
 
-  function tourStart() {
+  function resetDemo() {
     simPause();
-    Anim.hideNotif();
-    App.state = M.defaults(false);
-    save();
-    Object.keys(shown).forEach(k => delete shown[k]);
-    tour.mode = 'tour';
-    tour.step = 0;
-    renderGuide();
-    go('welcome', null, { force: true, reset: true, dir: 'fade' });
-  }
-  function tourGo(i) {
-    i = Math.max(0, Math.min(STEPS.length - 1, i));
-    const step = STEPS[i];
-    clearSpot();
-    tour.step = i;
-    if (step.screens) {
-      go(step.screens[0], null, { force: true, reset: true });
-    } else {
-      M.ensureReady();
-      // Skipped ahead with Next? Borrow the sample friends so Sunday has something to show.
-      if (!App.state.friends.length) App.state.friends = D.sampleFriends.slice();
-      tour.step = i;
-      runMoment(i);
-    }
-    renderGuide();
-  }
-  function tourNext() { if (tour.step >= STEPS.length - 1) tourFinish(); else tourGo(tour.step + 1); }
-  function tourBack() { if (tour.step > 0) tourGo(tour.step - 1); }
-  function tourFinish() {
-    clearSpot();
-    tour.mode = 'done';
-    renderGuide();
-  }
-  function tourLeave() {
-    clearSpot();
-    tour.mode = 'explore';
-    renderGuide();
-  }
-  /* "Explore freely": a ready-made account if you haven't set one up. */
-  function explore() {
-    clearSpot();
-    tour.mode = 'explore';
-    if (!App.state.onboarded) {
-      App.state = M.defaults(true);
-      save();
-      go('today', null, { force: true, reset: true, dir: 'fade' });
-    }
-    renderGuide();
-  }
-
-  function startOver() {
-    simPause();
-    Anim.hideNotif();
-    App.state = M.defaults(false);
+    hideBanner();
+    try { window.localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+    App.state = M.defaults();
+    M.finishDefaults();
     save();
     stack = [];
-    if (tour.mode === 'tour' || tour.mode === 'done') tour.mode = 'explore';
-    renderGuide();
-    go('welcome', null, { force: true, reset: true, dir: 'fade' });
-    Anim.toast(T.me.startOverToast);
-  }
-
-  /* ---------- guide UI: side panel (desktop) + slim bars and welcome card (phone width) ---------- */
-  function hintFor(step) {
-    const id = current && current.id;
-    return (step.alts && step.alts[id]) || step.tryThis;
-  }
-
-  function jumpList() {
-    return '<p class="panel__label">' + T.panel.jumpTitle + '</p><nav class="panel__nav">' +
-      JUMPS.map(id => '<button class="panel__link" type="button" data-jump="' + id + '">' + T.screens[id] + '</button>').join('') + '</nav>';
-  }
-
-  function renderPanel() {
-    const P = T.panel;
-    const p = document.getElementById('panel');
-    const s = App.state;
-    let body = '';
-    if (tour.mode === 'welcome') {
-      body = '<div class="welcome">' +
-        '<p class="welcome__t">' + P.welcomeTitle + '</p><p class="welcome__s">' + P.welcomeSub + '</p>' +
-        '<div class="welcome__btns"><button type="button" class="btn btn--primary" data-tour="start">' + P.start + '</button>' +
-        '<button type="button" class="btn btn--ghost" data-tour="explore">' + P.explore + '</button></div></div>';
-    } else if (tour.mode === 'tour') {
-      const st = STEPS[tour.step];
-      const last = tour.step === STEPS.length - 1;
-      body = '<div class="guide">' +
-        '<p class="guide__count">' + UI.fill(P.step, { n: tour.step + 1, total: STEPS.length }) + '</p>' +
-        '<div class="guide__bar"><i style="width:' + ((tour.step + 1) / STEPS.length * 100) + '%"></i></div>' +
-        '<h2 class="guide__title">' + st.title + '</h2>' +
-        '<p class="guide__explain">' + st.explain + '</p>' +
-        '<p class="guide__try"><b>' + P.tryThis + '</b> ' + hintFor(st) + '</p>' +
-        '<div class="guide__nav"><button type="button" class="btn btn--ghost btn--sm" data-tour="back"' + (tour.step === 0 ? ' disabled' : '') + '>' + UI.icon('chevronLeft', 16) + P.back + '</button>' +
-        '<button type="button" class="btn btn--primary btn--sm" data-tour="next">' + (last ? P.finish : P.next) + UI.icon('chevron', 16) + '</button></div>' +
-        '<ol class="guide__steps">' + STEPS.map((x, i) =>
-          '<li><button type="button" data-tour="step" data-i="' + i + '" class="' + (i < tour.step ? 'is-done' : i === tour.step ? 'is-current' : '') + '"><span>' + (i < tour.step ? UI.icon('check', 12) : i + 1) + '</span>' + x.title + '</button></li>').join('') + '</ol>' +
-        '<button type="button" class="linkbtn guide__leave" data-tour="leave">' + P.leave + '</button>' +
-        '</div>';
-    } else if (tour.mode === 'done') {
-      body = '<div class="welcome welcome--done">' +
-        '<p class="welcome__t">' + P.doneTitle + '</p><p class="welcome__s">' + P.doneSub + '</p>' +
-        '<div class="welcome__btns"><button type="button" class="btn btn--primary" data-tour="start">' + UI.icon('refresh', 16) + P.restart + '</button></div></div>';
-    } else {
-      body = '<button type="button" class="btn btn--primary btn--sm panel__start" data-tour="start">' + UI.icon('play', 14) + P.start + '</button>';
-    }
-    const simBlock = s.onboarded && tour.mode !== 'welcome' ? simHTML(false) : '';
-    const jumps = tour.mode === 'explore' || tour.mode === 'done' ? jumpList() : '';
-    p.innerHTML =
-      '<div class="panel__brand">' + UI.wordmark(40) + '</div>' +
-      '<p class="panel__tag">' + T.tagline + '</p>' +
-      body + simBlock + jumps +
-      '<p class="panel__foot">' + P.foot + '</p>';
-  }
-
-  function renderBars() {
-    const P = T.panel;
-    const bar = document.getElementById('tourbar');
-    if (tour.mode === 'tour') {
-      const s = STEPS[tour.step];
-      const last = tour.step === STEPS.length - 1;
-      bar.innerHTML =
-        '<div class="tourbar__row"><span class="tourbar__count">' + (tour.step + 1) + '/' + STEPS.length + '</span>' +
-          '<span class="tourbar__title">' + s.title + '</span>' +
-          '<button type="button" class="tourbar__btn" data-tour="back" aria-label="' + P.back + '"' + (tour.step === 0 ? ' disabled' : '') + '>' + UI.icon('chevronLeft', 18) + '</button>' +
-          '<button type="button" class="tourbar__btn tourbar__btn--next" data-tour="next">' + (last ? P.finish : P.next) + '</button></div>' +
-        '<p class="tourbar__try"><b>' + P.tryThis + '</b> ' + hintFor(s) + '</p>' +
-        '<i class="tourbar__progress" style="width:' + ((tour.step + 1) / STEPS.length * 100) + '%"></i>';
-    } else if (tour.mode === 'done') {
-      bar.innerHTML =
-        '<div class="tourbar__row"><span class="tourbar__title">' + P.doneTitle + '</span>' +
-          '<button type="button" class="tourbar__btn tourbar__btn--next" data-tour="start">' + P.restart + '</button>' +
-          '<button type="button" class="tourbar__btn" data-tour="leave" aria-label="' + T.close + '">' + UI.icon('close', 18) + '</button></div>' +
-        '<p class="tourbar__try">' + P.doneSub + '</p>';
-    } else bar.innerHTML = '';
-    document.getElementById('simbar').innerHTML = App.state.onboarded ? simHTML(true) : '';
-  }
-
-  function renderWelcome() {
-    const P = T.panel;
-    document.getElementById('welcome').innerHTML =
-      '<div class="welcome welcome--overlay">' + UI.wordmark(32) +
-        '<p class="welcome__t">' + P.welcomeTitle + '</p><p class="welcome__s">' + P.welcomeSub + '</p>' +
-        '<div class="welcome__btns"><button type="button" class="btn btn--primary btn--block" data-tour="start">' + P.start + '</button>' +
-        '<button type="button" class="btn btn--ghost btn--block" data-tour="explore">' + P.explore + '</button></div></div>';
-  }
-
-  function renderGuide() {
-    renderPanel();
-    renderBars();
-    document.body.classList.toggle('is-welcome', tour.mode === 'welcome');
-    phone().classList.toggle('has-tourbar', tour.mode === 'tour' || tour.mode === 'done');
-    setChrome();
+    App.lastTab = 'today';
     renderSim();
-  }
-
-  function jumpTo(id) {
-    const meta = META[id];
-    if (!meta.ob && id !== 'recap2026' && !App.state.onboarded) {
-      M.ensureReady();
-      if (!App.state.friends.length) App.state.friends = D.sampleFriends.slice();
-    }
-    save();
-    go(id, null, { force: true, reset: true, dir: 'fade' });
-    renderGuide();
-  }
-
-  function onDocClick(e) {
-    if (onSimClick(e)) return;
-    const b = e.target.closest('[data-tour]');
-    if (b) {
-      const a = b.dataset.tour;
-      if (a === 'start') tourStart();
-      else if (a === 'explore') explore();
-      else if (a === 'leave') tourLeave();
-      else if (a === 'next') tourNext();
-      else if (a === 'back') tourBack();
-      else if (a === 'step') tourGo(Number(b.dataset.i));
-      return;
-    }
-    const j = e.target.closest('[data-jump]');
-    if (j && !j.closest('.demo')) jumpTo(j.dataset.jump);
-    if (e.target.closest('[data-demo-open]')) toggleDemo(true);
+    go('welcome', null, { force: true, reset: true, dir: 'fade' });
+    Anim.toast(T.reset.done);
   }
 
   /* ---------- tab bar ---------- */
   function buildTabbar() {
     const bar = document.getElementById('tabbar');
-    bar.innerHTML = TABS.map(t =>
-      '<button class="tab" type="button" data-tab="' + t.id + '">' + UI.icon(t.icon, 24) + '<span>' + T.tabs[t.id] + '</span></button>').join('');
-    bar.addEventListener('click', e => {
-      const b = e.target.closest('[data-tab]');
-      if (b) go(b.dataset.tab);
-    });
-  }
-
-  /* ---------- demo menu (press D) ---------- */
-  let demoOpen = false;
-  function buildDemo() {
-    const X = T.demo;
-    const d = document.getElementById('demo');
-    d.innerHTML =
-      '<div class="demo__scrim" data-close></div>' +
-      '<div class="demo__card" role="dialog" aria-modal="true" aria-label="' + X.title + '">' +
-        '<div class="demo__head"><div><p class="demo__title">' + X.title + '</p><p class="demo__sub">' + X.sub + '</p></div>' +
-          '<button type="button" class="demo__x" data-close aria-label="' + T.close + '">' + UI.icon('close', 20) + '</button></div>' +
-        '<div class="demo__actions">' +
-          '<button type="button" class="dbtn" data-demo="restart">' + UI.icon('refresh', 18) + X.restart + '</button>' +
-          '<button type="button" class="dbtn" data-demo="play">' + UI.icon('play', 18) + X.play + '</button>' +
-          '<button type="button" class="dbtn" data-demo="over">' + UI.icon('close', 18) + X.startOver + '</button>' +
-        '</div>' +
-        '<p class="demo__label">' + X.jump + '</p>' +
-        '<div class="demo__grid">' + JUMPS.map(id => '<button type="button" class="dlink" data-jump="' + id + '">' + T.screens[id] + '</button>').join('') + '</div>' +
-        '<p class="demo__foot">' + X.foot + '</p>' +
-      '</div>';
-    d.addEventListener('click', e => {
-      if (e.target.closest('[data-close]')) { toggleDemo(false); return; }
-      const j = e.target.closest('[data-jump]');
-      if (j) { toggleDemo(false); jumpTo(j.dataset.jump); return; }
-      const a = e.target.closest('[data-demo]');
-      if (!a) return;
-      toggleDemo(false);
-      if (a.dataset.demo === 'restart') tourStart();
-      if (a.dataset.demo === 'over') startOver();
-      if (a.dataset.demo === 'play') {
-        if (!App.state.onboarded) explore();
-        setTimeout(simPlay, 400);
-      }
-    });
-  }
-  function toggleDemo(force) {
-    demoOpen = typeof force === 'boolean' ? force : !demoOpen;
-    const d = document.getElementById('demo');
-    d.classList.toggle('is-on', demoOpen);
-    d.setAttribute('aria-hidden', demoOpen ? 'false' : 'true');
-    if (demoOpen) { const first = d.querySelector('.dbtn'); if (first) first.focus(); }
+    bar.innerHTML = TABS.map(t => '<button class="tab" type="button" data-tab="' + t.id + '">' + UI.icon(t.icon, 24) + '<span>' + T.tabs[t.id] + '</span></button>').join('');
+    bar.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
   }
 
   /* Scale the phone to fit short laptop screens. */
@@ -618,17 +396,11 @@
   }
 
   function onKey(e) {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target || {};
     const tag = (t.tagName || '').toLowerCase();
-    const typing = tag === 'textarea' || (tag === 'input' && ['checkbox', 'radio', 'range'].indexOf(t.type) < 0);
-    if ((e.key === 'd' || e.key === 'D') && !typing) { toggleDemo(); return; }
-    if (e.key === 'Escape') {
-      if (demoOpen) toggleDemo(false);
-      else if (App._sheetClose) App._sheetClose();
-      return;
-    }
-    if (demoOpen || typing || !current || !current.el.story) return;
+    const typing = tag === 'textarea' || tag === 'select' || (tag === 'input' && ['checkbox', 'radio', 'range'].indexOf(t.type) < 0);
+    if (e.key === 'Escape' && App._sheetClose) { App._sheetClose(); return; }
+    if (typing || !current || !current.el.story) return;
     if (e.key === 'ArrowRight' || (e.key === ' ' && tag !== 'button')) { e.preventDefault(); current.el.story.next(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); current.el.story.prev(); }
   }
@@ -638,23 +410,25 @@
     scale: 1,
     lastTab: 'today',
     _sheetClose: null,
-    go, back, save, sheet, on, emit, startOver,
-    current: () => current,
-    tour: { start: tourStart, finish: tourFinish, isOn: () => tour.mode === 'tour' }
+    go, back, save, sheet, on, emit,
+    current: () => current
   };
 
   function init() {
+    M.finishDefaults();
+    save();
     fit();
     window.addEventListener('resize', fit);
     buildTabbar();
-    buildDemo();
-    renderWelcome();
-    document.addEventListener('click', onDocClick);
+    buildReset();
+    renderPanel();
+    document.getElementById('notif').addEventListener('click', onBannerClick);
+    document.addEventListener('click', e => { onSimClick(e); });
     document.addEventListener('keydown', onKey);
     on('clock', () => { renderClock(); renderSim(); });
     on('day', renderSim);
-    go(App.state.onboarded ? 'today' : 'welcome', null, { dir: 'fade' });
-    renderGuide();
+    on('resolved', () => { if (sim.waiting) { hideBanner(); setTimeout(simPlay, 700); } });
+    go('today', null, { dir: 'fade' });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
