@@ -84,33 +84,41 @@
   }
 
   /* Lock-screen style notification that slides down from the top of the phone. */
+  /* Two-part notification: a small grey agent banner, then Detour's coral line attached below.
+     sticky = stays until tapped or hidden (the day simulator pauses while it waits). */
   let notifTimer = 0;
+  let notifHide = null;
   function notify(o) {
     const n = document.getElementById('notif');
     if (!n) return;
+    if (notifHide) notifHide(true);
     let hidden = false;
-    const hide = () => {
+    const hide = quiet => {
       if (hidden) return;
       hidden = true;
+      notifHide = null;
       clearTimeout(notifTimer);
       n.classList.remove('is-on');
       n.setAttribute('aria-hidden', 'true');
-      if (o.onHide) o.onHide();
+      if (o.onHide && !quiet) o.onHide();
     };
     n.innerHTML =
-      '<span class="notif__icon">' + (o.iconHTML || '') + '</span>' +
-      '<span class="notif__main">' +
-        '<span class="notif__head"><span>' + (o.app || '') + '</span><span>' + (o.when || '') + '</span></span>' +
-        (o.title ? '<span class="notif__title">' + o.title + '</span>' : '') +
-        '<span class="notif__body">' + o.body + '</span>' +
-        (o.detourLine ? '<span class="notif__detour">' + o.detourLine + '</span>' : '') +
-      '</span>';
-    n.onclick = () => { if (o.onTap) o.onTap(); hide(); };
+      '<span class="notif__part notif__part--agent">' +
+        '<span class="notif__icon notif__icon--agent">' + (o.agentIcon || '') + '</span>' +
+        '<span class="notif__main"><span class="notif__head"><b>' + o.agentLabel + '</b><span>' + (o.when || '') + '</span></span>' +
+        '<span class="notif__body">' + o.agent + '</span></span></span>' +
+      (o.detour ? '<span class="notif__part notif__part--detour">' +
+        '<span class="notif__icon">' + (o.detourIcon || '') + '</span>' +
+        '<span class="notif__main"><span class="notif__head"><b>' + o.detourLabel + '</b></span>' +
+        '<span class="notif__detourline">' + o.detour + '</span></span></span>' : '');
+    n.onclick = () => { if (o.onTap) o.onTap(); hide(true); };
     n.setAttribute('aria-hidden', 'false');
     replayClass(n, 'is-on');
     clearTimeout(notifTimer);
-    notifTimer = setTimeout(hide, o.duration || 6500);
+    if (!o.sticky) notifTimer = setTimeout(hide, o.duration || 6500);
+    notifHide = hide;
   }
+  function hideNotif() { if (notifHide) notifHide(true); }
 
   /* Tour spotlight: a soft pulsing ring + "Tap here" bubble over one element inside `root`.
      Follows the element while it scrolls; removes itself when the element is tapped or gone. */
@@ -134,7 +142,7 @@
     let raf = 0, gone = false;
     const place = () => {
       if (gone) return;
-      if (!target.isConnected || target.closest('.is-leaving')) { remove(); return; }
+      if (!target.isConnected || target.closest('.is-leaving') || getComputedStyle(target).pointerEvents === 'none') { remove(); return; }
       const s = scale();
       const r = target.getBoundingClientRect(), p = root.getBoundingClientRect();
       const pad = 6;
@@ -222,7 +230,7 @@
   }
 
   window.Anim = {
-    reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, notify, spotlight, swipeable,
+    reduced, easeOut, easeInOut, countUp, drawPath, ring, replayClass, toast, notify, hideNotif, spotlight, swipeable,
     wait: ms => new Promise(r => setTimeout(r, ms))
   };
 })();
