@@ -138,7 +138,7 @@
       p.hometown = home;
       p.homeOther = other.value.trim();
       p.year18 = Number(year.value);
-      if (changed) s.quiz = {};
+      if (changed) { s.quiz = {}; s.quizIds = null; }
       App.save();
       App.go('quiz');
     });
@@ -150,7 +150,7 @@
      ========================================================= */
   Screens.quiz = function () {
     const Q = T.quiz;
-    const cards = Model.quizItems();
+    const cards = Model.newQuiz();
     const home = Model.hometown();
     let i = 0, top = null, swipe = null;
     const answers = {};

@@ -32,62 +32,121 @@
   /* =========================================================
      Options: a swipeable stack of three cards, source front and centre
      ========================================================= */
+  /* Swipes only move between cards. Choosing is only with buttons:
+     "Do this", "Reject", or "Keep my agent's pick". Reject them all and the agent's pick stays. */
   UI.openOptions = function (id) {
     const dec = Model.decision(id);
     if (!dec || dec.kind !== 'repeat') return;
     const O = T.options;
-    const opts = Model.optionsFor(dec);
-    let k = 0, swipe = null;
+    let cards = Model.optionsFor(dec);
+    let k = 0;
+    let mode = 'stack';
     const box = h(
       '<div class="optsheet">' +
         '<p class="agentpick">' + icon('chip', 18) + '<span>' + fill(O.picked, { x: esc(dec.pick), note: esc(dec.note) }) + '</span></p>' +
-        '<div class="ostack" data-stack></div>' +
-        '<div class="odots" aria-hidden="true">' + opts.map(() => '<i></i>').join('') + '</div>' +
-        '<p class="fine center">' + O.hint + '</p>' +
+        '<div data-view></div>' +
         '<button type="button" class="btn btn--quiet btn--block" data-keep>' + O.keep + '</button>' +
         '<p class="noads">' + icon('shield', 16) + '<span>' + O.noPaid + '</span></p>' +
       '</div>'
     );
     const close = App.sheet(box);
-    const stack = $(box, '[data-stack]');
-    function cardHTML(o, behind) {
+    const view = $(box, '[data-view]');
+
+    function band(o) {
       const src = D.sources[o.source];
       const fr = o.friend ? Model.person(o.friend) : null;
-      return '<article class="ocard' + (behind ? ' is-next' : '') + '" data-opt="' + o.id + '">' +
-        '<div class="ocard__band" style="background:' + src.color + '">' +
-          (fr ? avatar(fr, 36) : '<span class="ocard__icon">' + icon(src.icon, 20) + '</span>') +
-          '<div><p class="ocard__src">' + src.label + '</p><p class="ocard__sub">' + o.sub + '</p></div></div>' +
-        '<div class="ocard__body">' +
-          '<h3 class="ocard__title">' + o.title + '</h3>' +
-          (o.line ? '<p class="ocard__line">' + o.line + '</p>' : '') +
-          '<p class="ocard__meta">' + icon('clock', 14) + '<span>' + o.meta + '</span>' + (o.free ? freeChip() : '') + '</p>' +
-          '<div class="ocard__btns"><button type="button" class="btn btn--primary btn--sm" data-choose="swap">' + O.swap + '</button>' +
-          '<button type="button" class="btn btn--ghost btn--sm" data-choose="self">' + O.self + '</button></div>' +
+      return '<div class="ocard__band" style="background:' + src.color + '">' +
+        (fr ? avatar(fr, 36) : '<span class="ocard__icon">' + icon(src.icon, 20) + '</span>') +
+        '<div><p class="ocard__src">' + src.label + '</p><p class="ocard__sub">' + o.sub + '</p></div></div>';
+    }
+    function facts(o) {
+      return '<p class="ocard__facts">' + o.facts.map(f => '<span>' + f + '</span>').join('') +
+        (o.goal ? '<span class="chip chip--goal">' + icon('spark', 14) + O.goal + '</span>' : '') +
+        (o.free && !o.cook ? freeChip() : '') + '</p>';
+    }
+    function buttons(o) {
+      return '<div class="ocard__btns"><button type="button" class="btn btn--primary btn--sm" data-do="' + o.id + '">' + O.doThis + '</button>' +
+        '<button type="button" class="btn btn--ghost btn--sm" data-reject="' + o.id + '">' + O.reject + '</button></div>';
+    }
+    function cardHTML(o, cls) {
+      return '<article class="ocard' + (cls ? ' ' + cls : '') + '" data-opt="' + o.id + '">' + band(o) +
+        '<div class="ocard__body"><h3 class="ocard__title">' + o.title + '</h3>' +
+          (o.line ? '<p class="ocard__line">' + o.line + '</p>' : '') + facts(o) + buttons(o) + '</div></article>';
+    }
+
+    function renderStack(from) {
+      const n = cards.length;
+      const top = cardHTML(cards[k], from ? 'from-' + from : '');
+      view.innerHTML =
+        '<div class="ostack-wrap">' +
+          '<button type="button" class="onav" data-nav="-1" aria-label="' + O.prev + '"' + (n < 2 ? ' disabled' : '') + '>' + icon('chevronLeft', 20) + '</button>' +
+          '<div class="ostack" data-stack>' + (n > 1 ? cardHTML(cards[(k + 1) % n], 'is-next') : '') + top + '</div>' +
+          '<button type="button" class="onav" data-nav="1" aria-label="' + O.next + '"' + (n < 2 ? ' disabled' : '') + '>' + icon('chevron', 20) + '</button>' +
         '</div>' +
-        '<span class="qcard__hint qcard__hint--yes" data-hint="yes">' + O.swap + '</span>' +
-        '<span class="qcard__hint qcard__hint--no" data-hint="no">' + icon('arrowRight', 14) + '</span>' +
-      '</article>';
+        '<div class="odots">' + cards.map((c, i) =>
+          '<button type="button" data-dot="' + i + '" class="' + (i === k ? 'is-on' : '') + '" aria-label="' + fill(O.dot, { n: i + 1 }) + '"' + (i === k ? ' aria-current="true"' : '') + '></button>').join('') + '</div>' +
+        '<div class="ostack__foot"><span class="fine">' + (n > 1 ? O.hint : fill(O.left, { n: n })) + '</span>' +
+          '<button type="button" class="linkbtn" data-mode="list">' + O.compare + '</button></div>';
+      const topEl = $(view, '.ostack').lastElementChild;
+      if (n > 1) {
+        Anim.swipeable(topEl, {
+          getScale: () => App.scale,
+          onDecide: dir => move(dir === 'left' ? 1 : -1, true)
+        });
+      }
     }
-    function mount() {
-      stack.innerHTML = cardHTML(opts[(k + 1) % opts.length], true) + cardHTML(opts[k], false);
-      const top = stack.lastElementChild;
-      swipe = Anim.swipeable(top, {
-        getScale: () => App.scale,
-        onDecide: dir => { if (dir === 'right') choose('swap', opts[k]); else { k = (k + 1) % opts.length; mount(); } }
-      });
-      $$(box, '.odots i').forEach((d, i) => d.classList.toggle('is-on', i === k));
+    function renderList() {
+      view.innerHTML = '<div class="olist">' + cards.map(o => cardHTML(o, 'ocard--row')).join('') + '</div>' +
+        '<div class="ostack__foot ostack__foot--end"><button type="button" class="linkbtn" data-mode="stack">' + icon('chevronLeft', 14) + O.backToCards + '</button></div>';
     }
-    function choose(choice, o) {
-      Model.choose(id, choice, o);
+    function render(from) { if (mode === 'stack') renderStack(from); else renderList(); }
+    function move(step, swiped) {
+      if (cards.length < 2) return;
+      k = (k + step + cards.length) % cards.length;
+      render(swiped ? null : (step > 0 ? 'right' : 'left'));
+    }
+
+    function doThis(o) {
+      const cook = !!o.cook;
+      Model.choose(id, cook ? 'self' : 'swap', o);
+      let toast = O.swapToast;
+      if (cook) {
+        const s = st();
+        const from = s.stamps;
+        s.stamps += D.numbers.stampReward;
+        App.emit('stamps', { from: from, to: s.stamps });
+        toast = fill(O.cookToast, { n: D.numbers.stampReward });
+      }
       close();
-      done(choice === 'swap' ? O.swapToast : choice === 'self' ? O.selfToast : O.keepToast);
+      done(toast);
     }
+    function reject(o) {
+      cards = cards.filter(c => c !== o);
+      if (!cards.length) {
+        Model.choose(id, 'keep', null);
+        close();
+        done(O.allRejected);
+        return;
+      }
+      k = k % cards.length;
+      Anim.toast(O.rejectToast);
+      render();
+    }
+
     box.addEventListener('click', e => {
-      if (e.target.closest('[data-keep]')) { choose('keep', null); return; }
-      const b = e.target.closest('[data-choose]');
-      if (b) choose(b.dataset.choose, opts[k]);
+      if (e.target.closest('[data-keep]')) { Model.choose(id, 'keep', null); close(); done(O.keepToast); return; }
+      const d = e.target.closest('[data-do]');
+      if (d) { doThis(cards.find(c => c.id === d.dataset.do)); return; }
+      const r = e.target.closest('[data-reject]');
+      if (r) { reject(cards.find(c => c.id === r.dataset.reject)); return; }
+      const nav = e.target.closest('[data-nav]');
+      if (nav) { move(Number(nav.dataset.nav)); return; }
+      const dot = e.target.closest('[data-dot]');
+      if (dot) { const to = Number(dot.dataset.dot); if (to !== k) { const dir = to > k ? 'right' : 'left'; k = to; render(dir); } return; }
+      const m = e.target.closest('[data-mode]');
+      if (m) { mode = m.dataset.mode; render(); }
     });
-    mount();
+    render();
   };
 
   /* =========================================================
@@ -142,12 +201,11 @@
         }
         html = '<article class="moment">' + agentPart(e, dec) + '<div class="moment__detour">' + detourTag() + detour + '</div></article>';
       } else if (m.kind === 'remember') {
-        const r = Model.rememberById(e.rid);
-        const y = Model.year18() + r.off;
+        const r = Model.rememberInfo(e.rid);
         html = '<article class="moment moment--remember">' +
           '<div class="moment__row">' + detourTag() + '<span class="moment__time">' + X.rememberEyebrow + '</span></div>' +
-          '<div class="remember__pic">' + polaroid({ id: r.id, art: r.art }, { caption: String(y), tilt: -3 }) + '</div>' +
-          '<h2 class="moment__title">' + fill(r.title, { y: y }) + '</h2><p class="muted">' + r.line + '</p>' +
+          '<div class="remember__pic">' + polaroid({ id: r.id, art: r.art }, { caption: String(r.year), tilt: -3 }) + '</div>' +
+          '<h2 class="moment__title">' + r.title + '</h2><p class="muted">' + r.line + '</p>' +
           '<button type="button" class="btn btn--primary btn--block" data-remember="yes" data-id="' + e.id + '">' + r.cta + '</button>' +
           '<button type="button" class="btn btn--quiet btn--block" data-remember="no" data-id="' + e.id + '">' + X.skillNo + '</button></article>';
       } else if (m.kind === 'result') {
@@ -158,19 +216,25 @@
         html = '<article class="moment moment--done">' + agentPart(e, dec, true) +
           '<p class="moment__result">' + (src ? sourceDot(src) : icon(e.status === 'keep' ? 'check' : 'hand', 20)) + '<span>' + line + '</span></p>' +
           '<div class="moment__actions">' +
-            (canShare ? '<button type="button" class="btn btn--soft btn--sm" data-share="' + (e.status === 'swap' ? 'tried' : 'self') + '" data-title="' + esc(e.opt ? e.opt.title : '') + '">' + icon('share', 16) + X.share + '</button>' : '') +
+            (canShare ? '<button type="button" class="btn btn--soft btn--sm" data-share="' + (e.opt && e.opt.cook ? 'cooked' : e.status === 'swap' ? 'tried' : 'self') + '" data-title="' + esc(e.opt ? e.opt.title : '') + '">' + icon('share', 16) + X.share + '</button>' : '') +
             (dec.kind === 'repeat' ? '<button type="button" class="btn btn--quiet btn--sm" data-open="' + e.id + '">' + X.change + '</button>' : '') +
           '</div></article>';
       } else if (m.kind === 'diy') {
+        // The hero: today's challenge, big and alone on the screen.
         const c = Model.challenge();
+        const skill = D.skills.find(k => k.id === c.skill) || { name: '' };
         const going = s.day.diy !== 'idle';
-        html = '<article class="moment moment--diy">' +
-          '<div class="moment__row">' + detourTag() + '<span class="moment__time">' + X.diyEyebrow + '</span></div>' +
-          '<div class="moment__art">' + icon(c.icon, 36) + '</div>' +
-          '<h2 class="moment__title">' + (going ? X.diyGoing : c.title) + '</h2><p class="muted">' + (going ? X.diyGoingSub : c.line) + '</p>' +
-          (going ? '<button type="button" class="btn btn--primary btn--block" data-diy="did">' + X.diyDid + '</button>'
-            : '<button type="button" class="btn btn--primary btn--block" data-diy="in">' + X.diyIn + '</button>' +
-              '<button type="button" class="btn btn--quiet btn--block" data-diy="not">' + X.diyNot + '</button>') + '</article>';
+        html = '<article class="hero">' +
+          '<div class="hero__path">' + dottedPath('splash', { color: 'var(--coral)', width: 3, gap: 9 }) + '</div>' +
+          '<p class="hero__label">' + icon(c.icon, 16) + '<span>' + X.diyLabel + ' · ' + skill.name + '</span></p>' +
+          '<h2 class="hero__title">' + (going ? X.diyGoing : c.title) + '</h2>' +
+          '<p class="hero__line">' + (going ? X.diyGoingSub : fill(c.line, { dish: esc(Model.plannedDinner()) })) + '</p>' +
+          '<p class="hero__reward">' + icon('stamp', 18) + fill(X.reward, { n: D.numbers.stampReward }) + '</p>' +
+          '<div class="hero__btns">' +
+            (going ? '<button type="button" class="btn btn--primary btn--block btn--lg" data-diy="did">' + X.diyDid + '</button>'
+              : '<button type="button" class="btn btn--primary btn--block btn--lg" data-diy="in">' + X.diyIn + '</button>' +
+                '<button type="button" class="btn btn--quiet btn--block" data-diy="not">' + X.diyNot + '</button>') +
+          '</div></article>';
       } else {
         const dec = e && e.id !== 'remember' ? Model.decision(e.id) : null;
         const latest = dec ? '<p class="calm__latest">' + icon('chip', 14) + fill(X.latest, { x: dec.agent.charAt(0).toLowerCase() + dec.agent.slice(1) }) + '</p>' : '';
@@ -180,6 +244,7 @@
           '<p class="fine">' + (s.day.diy === 'done' ? X.diyDone : s.day.diy === 'skip' ? X.diyLater : X.calmHint) + '</p>' + latest + '</article>';
       }
       box.innerHTML = html;
+      el.classList.toggle('is-hero', m.kind === 'diy');
     }
 
     el.addEventListener('click', e => {
@@ -218,16 +283,16 @@
       '<section class="daylog"><div class="scroll">' + backBtn() +
         '<header class="stack-8"><h1 class="title">' + X.title + '</h1><p class="muted">' + X.sub + '</p></header>' +
         '<p class="daycount" data-count></p>' +
-        '<ol class="timeline" data-list></ol>' +
+        '<ol class="daylist" data-list></ol>' +
       '</div></section>'
     );
     function row(e) {
       if (e.id === 'remember') {
-        const r = Model.rememberById(e.rid);
+        const r = Model.rememberInfo(e.rid);
         const tone = e.status === 'remember' ? 'detour' : e.status === 'remembered' ? 'good' : 'plain';
         return '<li class="tl tl--' + tone + '"><span class="tl__time">' + Model.fmtTime(e.time) + '</span><div class="tl__body">' +
           '<p class="tl__agent tl__agent--detour">' + detourTag() + '</p>' +
-          '<p class="tl__what">' + fill(r.title, { y: Model.year18() + r.off }) + '</p>' +
+          '<p class="tl__what">' + r.title + '</p>' +
           '<p class="tl__status">' + S[e.status] + '</p></div></li>';
       }
       const dec = Model.decision(e.id);
@@ -385,6 +450,10 @@
           '<input class="range" type="range" min="0" max="1000" value="1000" aria-label="Year">' +
           '<div class="timeline__ends"><span>2026</span><span>2040</span></div>' +
           '<p class="timeline__note" data-note></p></div>' +
+        '<section class="stack-12"><div class="stack-4"><h2 class="h3">' + X.barsTitle + '</h2><p class="fine">' + X.barsSub + '</p></div>' +
+          '<div class="bars">' + D.ownBars.map(b =>
+            '<div class="bar"><div class="bar__top"><span>' + b.label + '</span><span>' + b.pct + '%</span></div>' +
+            '<div class="bar__track"><div class="bar__fill" data-pct="' + b.pct + '"></div></div></div>').join('') + '</div></section>' +
       '</div></section>'
     );
     const svg = $(el, '.map__svg');
@@ -451,7 +520,10 @@
     }));
     render();
     let startT = 0;
-    ctx.onEnter(() => { startT = setTimeout(play, 350); });
+    ctx.onEnter(() => {
+      startT = setTimeout(play, 350);
+      $$(el, '.bar__fill').forEach((f, i) => setTimeout(() => { f.style.width = Math.max(2, f.dataset.pct) + '%'; }, 300 + i * 80));
+    });
     ctx.onLeave(() => { cancelAnimationFrame(raf); clearTimeout(startT); });
     return el;
   };

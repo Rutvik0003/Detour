@@ -5,7 +5,7 @@
   const T = D.text;
   const UI = window.UI;
   const M = window.Model;
-  const STORE_KEY = 'detour-prototype-v4';
+  const STORE_KEY = 'detour-prototype-v5';
 
   /* Every screen. ob = setup; tab = owns a tab; tabbar = shows the bar under the last tab. */
   const SCREENS = [
@@ -32,7 +32,7 @@
       const raw = window.localStorage.getItem(STORE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved && saved.v === 4) return Object.assign(M.defaults(), saved);
+        if (saved && saved.v === 5) return Object.assign(M.defaults(), saved);
       }
     } catch (e) { /* storage unavailable: run from memory */ }
     return M.defaults();
@@ -178,11 +178,10 @@
     let html;
     const cont = '<button type="button" class="bn__cont" data-bn="cont">' + B.cont + UI.icon('chevron', 14) + '</button>';
     if (e.id === 'remember') {
-      const r = M.rememberById(e.rid);
-      const y = M.year18() + r.off;
+      const r = M.rememberInfo(e.rid);
       html = '<div class="bn bn--detour bn--remember"><div class="bn__row">' + UI.detourTag() + '<span class="bn__time">' + B.remember + '</span>' + cont + '</div>' +
-        '<div class="bn__mem">' + UI.polaroid({ id: r.id, art: r.art }, { caption: String(y), tilt: -4 }) +
-        '<div><p class="bn__strong">' + UI.fill(r.title, { y: y }) + '</p><p class="bn__text">' + r.line + '</p></div></div>' +
+        '<div class="bn__mem">' + UI.polaroid({ id: r.id, art: r.art }, { caption: String(r.year), tilt: -4 }) +
+        '<div><p class="bn__strong">' + r.title + '</p><p class="bn__text">' + r.line + '</p></div></div>' +
         '<div class="bn__btns"><button type="button" class="btn btn--primary btn--sm" data-bn="ryes">' + r.cta + '</button>' +
         '<button type="button" class="btn btn--quiet btn--sm" data-bn="rno">' + T.today.skillNo + '</button></div></div>';
     } else {

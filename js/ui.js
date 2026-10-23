@@ -170,6 +170,11 @@
     tv: bg('#3A3326') + '<rect x="50" y="60" width="200" height="130" rx="12" fill="#1F1B16"/><rect x="62" y="72" width="176" height="106" fill="#6FA35C"/><rect x="146" y="100" width="4" height="40" fill="#F6EFE4"/><rect x="154" y="100" width="4" height="40" fill="#F6EFE4"/>' + [40, 80, 120, 160, 200, 240].map(x => '<circle cx="' + x + '" cy="250" r="22" fill="#1F1B16"/>').join(''),
     radio: bg('#E7D3B8') + '<rect x="60" y="110" width="180" height="120" rx="16" fill="#C9533A"/><circle cx="115" cy="170" r="34" fill="#F6EFE4"/><circle cx="115" cy="170" r="22" fill="#B5683A"/><rect x="170" y="140" width="50" height="10" rx="5" fill="#F6EFE4"/><rect x="170" y="160" width="50" height="10" rx="5" fill="#F6EFE4"/><path d="M90 110l60-40" stroke="#1F1B16" stroke-width="5"/><path class="anim anim-float" d="M230 80v-26l14 4" stroke="#1F1B16" stroke-width="4" fill="none"/><circle class="anim anim-float" cx="226" cy="82" r="6" fill="#1F1B16"/>',
     shirt: bg('#D9ECE8') + '<path d="M150 50l-12 14h24z" stroke="#1F1B16" stroke-width="4" fill="none"/><path d="M110 70l-50 28 16 40 20-8v110h108V130l20 8 16-40-50-28q-6 20-40 20t-40-20z" fill="#4B5BA8"/><path d="M150 90v148" stroke="#F6EFE4" stroke-width="3" stroke-dasharray="2 14"/>',
+    spinner: bg('#D9E4E8') + '<g class="anim anim-spin" style="transform-origin:150px 150px"><circle cx="150" cy="150" r="22" fill="#1F1B16"/>' +
+      [0, 120, 240].map(a => '<g transform="rotate(' + a + ' 150 150)"><rect x="140" y="70" width="20" height="60" rx="10" fill="#E2674A"/><circle cx="150" cy="82" r="18" fill="#C9533A"/><circle cx="150" cy="82" r="8" fill="#F6EFE4"/></g>').join('') +
+      '<circle cx="150" cy="150" r="9" fill="#F6EFE4"/></g>',
+    camera: bg('#F3E3CF') + '<rect x="60" y="110" width="180" height="110" rx="14" fill="#1F1B16"/><rect x="80" y="96" width="50" height="20" rx="5" fill="#1F1B16"/>' +
+      '<circle cx="150" cy="165" r="38" fill="#6E6A63"/><circle cx="150" cy="165" r="24" fill="#2B2340"/><circle cx="142" cy="157" r="6" fill="#F6EFE4" opacity=".7"/><rect x="200" y="124" width="22" height="12" rx="3" fill="#F6D7A7"/>',
     cake: bg('#F3E3CF') + '<rect x="70" y="140" width="160" height="80" rx="18" fill="#B5683A"/><path d="M70 160q80-40 160 0" fill="#8C5E3C"/><ellipse cx="150" cy="230" rx="110" ry="14" fill="#FFF8EC"/>' + steam(150, 120)
   };
   function scene(key) {
@@ -250,11 +255,11 @@
   /* "Then vs now" block for recaps. */
   function thenNow() {
     const X = T.thenNow;
-    const age = 19;
-    return '<div class="thennow"><div class="thennow__col"><p class="thennow__h">' + fill(X.then, { age: age }) + '</p>' +
-      D.thenNow.map(p => '<p class="thennow__then">' + p.then + '</p>').join('') + '</div>' +
+    const pairs = Model.thenNowPairs();
+    return '<div class="thennow"><div class="thennow__col"><p class="thennow__h">' + fill(X.then, { age: 19 }) + '</p>' +
+      pairs.map(p => '<p class="thennow__then">' + p.thenS + '</p>').join('') + '</div>' +
       '<div class="thennow__col"><p class="thennow__h">' + X.now + '</p>' +
-      D.thenNow.map(p => '<p class="thennow__now">' + p.now + '</p>').join('') + '</div></div>';
+      pairs.map(p => '<p class="thennow__now">' + p.nowS + '</p>').join('') + '</div></div>';
   }
 
   /* =========================================================

@@ -481,7 +481,12 @@ kbd {
 .range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--surface); border: 2px solid var(--coral); box-shadow: 0 2px 6px rgba(31, 27, 22, .18); }
 .range::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 2px solid var(--coral); box-shadow: 0 2px 6px rgba(31, 27, 22, .18); }
 .range:focus-visible { outline: 2px solid var(--teal); outline-offset: 6px; }
-.hint { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--teal); font-weight: 600; margin-top: -8px; }
+.hint { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--teal); font-weight: 600; }
+/* Taste Map: the slider thumb (26px) stays inside the card */
+.timeline .range { width: calc(100% - 26px); margin: 8px 13px; }
+.timeline__ends { padding: 0 2px; }
+.mapscreen .scroll { gap: var(--s3); }
+.stack-4 { display: flex; flex-direction: column; gap: 4px; }
 .bars { display: flex; flex-direction: column; gap: 14px; }
 .bar__top { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
 .bar__top span:last-child { font-variant-numeric: tabular-nums; color: var(--ink-70); }
@@ -855,7 +860,7 @@ kbd {
 
 /* Your day */
 .daycount { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 12px; border-radius: var(--r-pill); background: var(--sand); font-size: 14px; font-weight: 600; color: var(--ink-70); }
-.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.daylist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .tl { position: relative; display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 0 0 20px; }
 .tl::before { content: ""; position: absolute; left: 76px; top: 10px; bottom: -4px; width: 2px; background: var(--sand-2); }
 .tl:last-child::before { display: none; }
@@ -1022,9 +1027,48 @@ kbd {
 .moment__result .srcdot { margin-top: 6px; }
 .tl__status .srcdot { margin-right: 6px; vertical-align: 0; }
 
-/* Options: a card stack */
+/* Options: a card stack you can move through, or compare as a list */
+.ostack-wrap { display: grid; grid-template-columns: 30px 1fr 30px; align-items: center; gap: 4px; margin: 0 -10px; }
+.onav { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); box-shadow: var(--shadow); color: var(--ink-70); }
+.onav:hover { color: var(--ink); }
+.onav:disabled { opacity: .3; cursor: default; }
+.ostack__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ostack__foot--end { justify-content: flex-start; }
+.ostack__foot .linkbtn { display: inline-flex; align-items: center; gap: 2px; font-size: 14px; }
+.odots { display: flex; justify-content: center; gap: 4px; }
+.odots button { width: 8px; height: 8px; padding: 0; border-radius: 4px; background: var(--sand-2); transition: width .3s var(--ease), background .3s; box-sizing: content-box; border: 6px solid transparent; background-clip: padding-box; }
+.odots button.is-on { width: 22px; background-color: var(--ink); }
+.ocard.from-right { animation: card-in-right .3s var(--ease) both; }
+.ocard.from-left { animation: card-in-left .3s var(--ease) both; }
+@keyframes card-in-right { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes card-in-left { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+.ocard__facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; color: var(--ink-55); font-weight: 600; }
+.ocard__facts > span:not(.chip) { display: inline-flex; align-items: center; gap: 4px; }
+.chip--goal { background: var(--teal-tint); color: var(--teal); height: 26px; }
+.olist { display: flex; flex-direction: column; gap: 12px; }
+.ocard--row { position: relative; inset: auto; cursor: default; box-shadow: var(--shadow); border: 1px solid rgba(226, 214, 195, .6); }
+.ocard--row .ocard__band { padding: 12px 14px; }
+.ocard--row .ocard__body { padding: 14px; gap: 6px; }
+.ocard--row .ocard__title { font-size: 18px; }
+.ocard--row .ocard__btns { margin-top: 6px; }
+
+/* Today's challenge: the hero card */
+.today.is-hero .madecount { display: none; }
+.hero {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 14px;
+  padding: 28px 22px 20px; border-radius: 28px; background: var(--surface);
+  box-shadow: var(--shadow); border: 1px solid rgba(226, 214, 195, .55); animation: rise .45s var(--ease) both;
+}
+.hero > * { position: relative; }
+.hero__path { position: absolute; right: -40px; top: -18px; width: 230px; opacity: .45; pointer-events: none; }
+.hero__label { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 12px; border-radius: var(--r-pill); background: var(--coral-tint); color: var(--coral-ink); font-size: 13px; font-weight: 700; }
+.hero__title { font-family: var(--display); font-size: 30px; line-height: 1.15; font-weight: 800; letter-spacing: -.025em; }
+.hero__line { font-size: 17px; line-height: 1.45; color: var(--ink-70); }
+.hero__reward { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 8px 14px; border-radius: var(--r-pill); background: var(--sand); color: var(--coral-deep); font-size: 15px; font-weight: 800; }
+.hero__btns { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.btn--lg { height: 58px; font-size: 17px; }
 .optsheet { gap: 12px; }
-.ostack { position: relative; height: 380px; margin: 4px 0; }
+.ostack { position: relative; height: 400px; margin: 4px 0; }
 .ocard {
   position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden;
   border-radius: var(--r-lg); background: var(--surface); box-shadow: 0 10px 30px rgba(31, 27, 22, .14);
@@ -1201,6 +1245,8 @@ kbd {
   .resetwrap { top: calc(env(safe-area-inset-top, 0px) + 7px); right: 8px; }
   .resetbtn { height: 34px; padding: 0 10px; background: var(--bg); }
   .resetpop { top: 40px; }
+  .resetwrap { transition: opacity .2s; }
+  body:has(.notif.is-on) .resetwrap { opacity: 0; pointer-events: none; }
 }
 @media (max-height: 720px) {
   .quiz__sub { display: none; }
